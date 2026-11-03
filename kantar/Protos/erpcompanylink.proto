@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option csharp_namespace = "Kantar.Grpc";
+
+package kantar;
+
+// BaseForge.CodeGen tarafından üretildi — ErpCompanyLink entity'sine diğer servislerin
+// salt-okunur gRPC erişimi. Servis adı (ErpCompanyLinkService), C# implementasyon sınıfıyla
+// (ErpCompanyLinkGrpcService) çakışmasın diye ayrı tutulur.
+service ErpCompanyLinkService {
+  rpc GetById (ErpCompanyLinkByIdRequest) returns (ErpCompanyLinkMessage);
+}
+
+message ErpCompanyLinkByIdRequest {
+  string id = 1;
+}
+
+message ErpCompanyLinkMessage {
+  string id = 1;
+  string erp_system = 2;
+  string erp_code = 3;
+  bool is_default = 4;
+}

@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+option csharp_namespace = "Kantar.Grpc";
+
+package kantar;
+
+// BaseForge.CodeGen tarafından üretildi — Weighing entity'sine diğer servislerin
+// salt-okunur gRPC erişimi. Servis adı (WeighingService), C# implementasyon sınıfıyla
+// (WeighingGrpcService) çakışmasın diye ayrı tutulur.
+service WeighingService {
+  rpc GetById (WeighingByIdRequest) returns (WeighingMessage);
+}
+
+message WeighingByIdRequest {
+  string id = 1;
+}
+
+message WeighingMessage {
+  string id = 1;
+  string ticket_no = 2;
+  string direction = 3;
+  string status = 4;
+  string plate = 5;
+  string trailer_id = 6;
+  string trailer_plate = 7;
+  string driver_id = 8;
+  string driver_name = 9;
+  string driver_phone = 10;
+  string first_weight_kg = 11;
+  string first_weighed_at = 12;
+  bool first_is_manual = 13;
+  string second_weighbridge_id = 14;
+  string second_weight_kg = 15;
+  string second_weighed_at = 16;
+  bool second_is_manual = 17;
+  string gross_kg = 18;
+  string tare_kg = 19;
+  string net_kg = 20;
+  string tare_source = 21;
+  string cancel_reason = 22;
+  string note = 23;
+}

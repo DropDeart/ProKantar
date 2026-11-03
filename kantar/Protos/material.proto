@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+option csharp_namespace = "Kantar.Grpc";
+
+package kantar;
+
+// BaseForge.CodeGen tarafından üretildi — Material entity'sine diğer servislerin
+// salt-okunur gRPC erişimi. Servis adı (MaterialService), C# implementasyon sınıfıyla
+// (MaterialGrpcService) çakışmasın diye ayrı tutulur.
+service MaterialService {
+  rpc GetById (MaterialByIdRequest) returns (MaterialMessage);
+}
+
+message MaterialByIdRequest {
+  string id = 1;
+}
+
+message MaterialMessage {
+  string id = 1;
+  string code = 2;
+  string name = 3;
+  string unit = 4;
+  string kg_per_unit = 5;
+  string erp_stock_code = 6;
+  bool is_active = 7;
+}

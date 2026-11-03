@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+option csharp_namespace = "Platform.Grpc";
+
+package platform;
+
+// BaseForge.CodeGen tarafından üretildi — Device entity'sine diğer servislerin
+// salt-okunur gRPC erişimi. Servis adı (DeviceService), C# implementasyon sınıfıyla
+// (DeviceGrpcService) çakışmasın diye ayrı tutulur.
+service DeviceService {
+  rpc GetById (DeviceByIdRequest) returns (DeviceMessage);
+}
+
+message DeviceByIdRequest {
+  string id = 1;
+}
+
+message DeviceMessage {
+  string id = 1;
+  string user_id = 2;
+  string device_identifier = 3;
+  string platform = 4;
+  string push_token = 5;
+  string app_version = 6;
+  string last_seen_at = 7;
+}

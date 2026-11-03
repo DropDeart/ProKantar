@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+option csharp_namespace = "Platform.Grpc";
+
+package platform;
+
+// BaseForge.CodeGen tarafından üretildi — Trailer entity'sine diğer servislerin
+// salt-okunur gRPC erişimi. Servis adı (TrailerService), C# implementasyon sınıfıyla
+// (TrailerGrpcService) çakışmasın diye ayrı tutulur.
+service TrailerService {
+  rpc GetById (TrailerByIdRequest) returns (TrailerMessage);
+}
+
+message TrailerByIdRequest {
+  string id = 1;
+}
+
+message TrailerMessage {
+  string id = 1;
+  string owner_user_id = 2;
+  string plate = 3;
+}

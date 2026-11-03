@@ -1,0 +1,37 @@
+# Merkezi loglama — bu workspace'teki tüm BaseForge servisleri (Serilog) loglarını buraya gönderir.
+# Başlat:  docker compose up -d        (bu klasörde)
+# Grafana: http://localhost:3000  (kullanıcı/parola: .env içindeki GRAFANA_USER / GRAFANA_PASSWORD)
+#          'BaseForge Logs' dashboard'u ve Loki veri kaynağı hazır gelir.
+# Servisler Loki'ye appsettings.json'daki Serilog:LokiUrl ile bağlanır (varsayılan
+# http://host.docker.internal:3100); Loki kapalıysa servisler sessizce yalnızca konsola loglar.
+# Log saklama süresi (varsayılan 7 gün): grafana/loki-config.yaml -> limits_config.retention_period
+name: baseforge-observability
+services:
+  loki:
+    image: grafana/loki:3.2.0
+    ports:
+      - "${LOKI_PORT:-3100}:3100"
+    volumes:
+      - ./grafana/loki-config.yaml:/etc/loki/loki-config.yaml
+      - loki_data:/loki
+    command: -config.file=/etc/loki/loki-config.yaml
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?GRAFANA_PASSWORD .env içinde tanımlı olmalı}
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/etc/grafana/dashboards
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - loki
+    restart: unless-stopped
+
+volumes:
+  loki_data:
+  grafana_data:

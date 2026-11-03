@@ -1,0 +1,12 @@
+{
+  "services": [
+    {
+      "name": "identity",
+      "restPort": 8081,
+      "grpcPort": 8082,
+      "postgresPort": 5432,
+      "isIdentity": true,
+      "protected": false
+    }
+  ]
+}

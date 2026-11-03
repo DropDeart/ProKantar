@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+option csharp_namespace = "Platform.Grpc";
+
+package platform;
+
+// BaseForge.CodeGen tarafından üretildi — Carrier entity'sine diğer servislerin
+// salt-okunur gRPC erişimi. Servis adı (CarrierService), C# implementasyon sınıfıyla
+// (CarrierGrpcService) çakışmasın diye ayrı tutulur.
+service CarrierService {
+  rpc GetById (CarrierByIdRequest) returns (CarrierMessage);
+}
+
+message CarrierByIdRequest {
+  string id = 1;
+}
+
+message CarrierMessage {
+  string id = 1;
+  string owner_user_id = 2;
+  string name = 3;
+  string tax_no = 4;
+  string tax_office = 5;
+  string phone = 6;
+  string address = 7;
+}

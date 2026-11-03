@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+option csharp_namespace = "Kantar.Grpc";
+
+package kantar;
+
+// BaseForge.CodeGen tarafından üretildi — WeighingPhoto entity'sine diğer servislerin
+// salt-okunur gRPC erişimi. Servis adı (WeighingPhotoService), C# implementasyon sınıfıyla
+// (WeighingPhotoGrpcService) çakışmasın diye ayrı tutulur.
+service WeighingPhotoService {
+  rpc GetById (WeighingPhotoByIdRequest) returns (WeighingPhotoMessage);
+}
+
+message WeighingPhotoByIdRequest {
+  string id = 1;
+}
+
+message WeighingPhotoMessage {
+  string id = 1;
+  string stage = 2;
+  string camera_name = 3;
+  string url = 4;
+  string taken_at = 5;
+}

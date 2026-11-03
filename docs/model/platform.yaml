@@ -1,0 +1,146 @@
+# ProKantar — platform — global (MultiTenant: false) · BaseForge generate
+# Kaynak: docs/model/gen_prokantar.py (ER şemasıyla birlikte üretilir; elle düzenleme yerine oradan değiştir).
+service: platform
+database: prokantar_platform_db
+
+auth:                            # ZORUNLU: roller ve tenant_id JWT'den okunur
+  authority: http://host.docker.internal:8081   # identity REST
+  audience: baseforge-api
+  requireHttpsMetadata: false
+  protect: true
+  defaultAccess: authenticated
+  superRoles: [SuperAdmin]          # NOT: tenant filtresini aşmaz (BaseForge §6.1)
+
+dockerPorts:                     # identity: 8081/8082/5432
+  rest: 8085
+  grpc: 8086
+  postgres: 5434
+
+entities:
+  Carrier:
+    ownerField: OwnerUserId
+    filterable: [TaxNo]
+    access:
+      list: authenticated
+      getById: authenticated
+      create: [Driver, TenantAdmin, Operator]
+      update: [owner]
+      delete: [SuperAdmin]
+    props:
+      ownerUserId: guid                                                       # ownerField: kaydı açan kullanıcı (sub)
+      name: { type: string, maxLength: 200 }
+      taxNo: { type: string, nullable: true, maxLength: 11 }                  # VKN/TCKN
+      taxOffice: { type: string, nullable: true, maxLength: 100 }
+      phone: { type: string, nullable: true, maxLength: 20 }
+      address: { type: text, nullable: true }
+
+  Driver:
+    ownerField: UserId
+    filterable: [CarrierId, Phone]
+    access:
+      list: [owner]
+      getById: [Operator, TenantAdmin, owner]
+      create: [Driver]
+      update: [owner]
+      delete: [SuperAdmin]
+    props:
+      userId: guid                                                            # ownerField: identity/User (sub) - şoförün hesabı
+      fullName: { type: string, maxLength: 150 }
+      phone: { type: string, maxLength: 20 }
+      nationalId: { type: string, nullable: true, maxLength: 11 }             # TCKN
+      licenseNo: { type: string, nullable: true, maxLength: 30 }
+      kvkkConsentAt: { type: datetime, nullable: true }                       # açık rıza zamanı
+      locationConsent: { type: bool, default: "false" }
+      isActive: { type: bool, default: "true" }
+    relations:
+      carrier:
+        kind: many-to-one
+        target: Carrier
+        nullable: true
+
+  Vehicle:
+    ownerField: OwnerUserId
+    filterable: [Plate, CarrierId, IsClaimed]
+    access:
+      list: authenticated
+      getById: authenticated
+      create: [Driver, Operator, TenantAdmin]
+      update: [owner]
+      delete: [SuperAdmin]
+    props:
+      ownerUserId: guid                                                       # ownerField; sahiplenme (claim) = elle yazılacak uç
+      plate: { type: string, maxLength: 15 }                                  # UNIQUE elle; normalize (boşluksuz, büyük harf)
+      vehicleTypeCode: { type: string, nullable: true, maxLength: 30 }
+      brand: { type: string, nullable: true, maxLength: 50 }
+      model: { type: string, nullable: true, maxLength: 50 }
+      isClaimed: { type: bool, default: "false" }                             # operatör açtıysa false; şoför sahiplenince true
+    relations:
+      carrier:
+        kind: many-to-one
+        target: Carrier
+        nullable: true
+
+  Trailer:
+    ownerField: OwnerUserId
+    filterable: [Plate, CarrierId]
+    access:
+      list: authenticated
+      getById: authenticated
+      create: [Driver, Operator, TenantAdmin]
+      update: [owner]
+      delete: [SuperAdmin]
+    props:
+      ownerUserId: guid                                                       # ownerField
+      plate: { type: string, maxLength: 15 }                                  # UNIQUE elle
+    relations:
+      carrier:
+        kind: many-to-one
+        target: Carrier
+        nullable: true
+
+  DriverVehicle:
+    ownerField: UserId
+    filterable: [DriverId, VehicleId]
+    access:
+      list: [Operator, TenantAdmin, owner]
+      getById: [Operator, TenantAdmin, owner]
+      create: [Driver]
+      update: [owner]
+      delete: [owner]
+    props:
+      userId: guid                                                            # ownerField: şoförün kullanıcısı
+      startedAt: datetime
+      endedAt: { type: datetime, nullable: true }                             # null = aktif eşleşme
+    relations:
+      driver:
+        kind: many-to-one
+        target: Driver
+      vehicle:
+        kind: many-to-one
+        target: Vehicle
+      trailer:
+        kind: many-to-one
+        target: Trailer
+        nullable: true
+
+  Device:
+    ownerField: UserId
+    filterable: [DriverId]
+    access:
+      list: [owner]
+      getById: [owner]
+      create: [Driver]
+      update: [owner]
+      delete: [owner]
+    props:
+      userId: guid                                                            # ownerField
+      deviceIdentifier: { type: string, maxLength: 100 }
+      platform: { type: enum, values: [Android, Ios] }
+      pushToken: { type: string, nullable: true, maxLength: 500 }
+      appVersion: { type: string, nullable: true, maxLength: 20 }
+      lastSeenAt: { type: datetime, nullable: true }
+    relations:
+      driver:
+        kind: many-to-one
+        target: Driver
+

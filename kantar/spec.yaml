@@ -1,0 +1,542 @@
+service: kantar
+database: prokantar_kantar_db
+entities:
+  Station:
+    props:
+      name:
+        type: string
+        maxLength: 150
+      code:
+        type: string
+        maxLength: 30
+      address:
+        type: text
+        nullable: true
+      phone:
+        type: string
+        nullable: true
+        maxLength: 20
+      isActive:
+        type: bool
+        default: true
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin]
+      update: [TenantAdmin]
+      delete: [TenantAdmin]
+    filterable:
+    - IsActive
+    appendOnly: false
+    paginated: true
+    sortable: true
+    searchable: true
+  Weighbridge:
+    props:
+      name:
+        type: string
+        maxLength: 100
+      serialNo:
+        type: string
+        nullable: true
+        maxLength: 50
+      capacityKg: decimal
+      connectionType:
+        type: enum
+        nullable: true
+        values: [Serial, Tcp]
+      connectionInfo:
+        type: json
+        nullable: true
+      calibrationValidUntil:
+        type: date
+        nullable: true
+      isActive:
+        type: bool
+        default: true
+    relations:
+      station:
+        kind: many-to-one
+        target: Station
+        nullable: false
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin]
+      update: [TenantAdmin]
+      delete: [TenantAdmin]
+    filterable:
+    - StationId
+    - IsActive
+    appendOnly: false
+    paginated: true
+    sortable: true
+    searchable: true
+  Machine:
+    props:
+      name:
+        type: string
+        maxLength: 100
+      machineType:
+        type: string
+        maxLength: 50
+      plateOrSerial:
+        type: string
+        nullable: true
+        maxLength: 50
+      isActive:
+        type: bool
+        default: true
+    relations:
+      station:
+        kind: many-to-one
+        target: Station
+        nullable: false
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin]
+      update: [TenantAdmin]
+      delete: [TenantAdmin]
+    filterable:
+    - StationId
+    - IsActive
+    appendOnly: false
+    paginated: true
+    sortable: true
+    searchable: true
+  Company:
+    props:
+      name:
+        type: string
+        maxLength: 200
+      shortName:
+        type: string
+        nullable: true
+        maxLength: 50
+      taxNo:
+        type: string
+        nullable: true
+        maxLength: 11
+      taxOffice:
+        type: string
+        nullable: true
+        maxLength: 100
+      isCustomer:
+        type: bool
+        default: false
+      isSupplier:
+        type: bool
+        default: false
+      isCarrier:
+        type: bool
+        default: false
+      phone:
+        type: string
+        nullable: true
+        maxLength: 20
+      email:
+        type: string
+        nullable: true
+        maxLength: 150
+      address:
+        type: text
+        nullable: true
+      isActive:
+        type: bool
+        default: true
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin]
+      update: [TenantAdmin]
+      delete: [TenantAdmin]
+    filterable:
+    - IsCustomer
+    - IsSupplier
+    - IsCarrier
+    - IsActive
+    - TaxNo
+    appendOnly: false
+    paginated: true
+    sortable: true
+    searchable: true
+  ErpCompanyLink:
+    props:
+      erpSystem:
+        type: string
+        maxLength: 30
+      erpCode:
+        type: string
+        maxLength: 50
+      isDefault:
+        type: bool
+        default: true
+    relations:
+      company:
+        kind: many-to-one
+        target: Company
+        nullable: false
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin]
+      update: [TenantAdmin]
+      delete: [TenantAdmin]
+    filterable:
+    - CompanyId
+    - ErpSystem
+    - ErpCode
+    appendOnly: false
+    paginated: true
+    sortable: true
+    searchable: true
+  VehicleType:
+    props:
+      code:
+        type: string
+        maxLength: 30
+      name:
+        type: string
+        maxLength: 50
+      maxGrossKg:
+        type: decimal
+        nullable: true
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin]
+      update: [TenantAdmin]
+      delete: [TenantAdmin]
+    filterable:
+    - Code
+    appendOnly: false
+    paginated: true
+    sortable: true
+    searchable: true
+  Material:
+    props:
+      code:
+        type: string
+        maxLength: 50
+      name:
+        type: string
+        maxLength: 200
+      unit:
+        type: enum
+        values: [Kg, Ton, M3, Piece]
+      kgPerUnit:
+        type: decimal
+        nullable: true
+      erpStockCode:
+        type: string
+        nullable: true
+        maxLength: 50
+      isActive:
+        type: bool
+        default: true
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin]
+      update: [TenantAdmin]
+      delete: [TenantAdmin]
+    filterable:
+    - Code
+    - Unit
+    - IsActive
+    appendOnly: false
+    paginated: true
+    sortable: true
+    searchable: true
+  TenantVehicle:
+    props:
+      storedTareKg:
+        type: decimal
+        nullable: true
+      storedTareAt:
+        type: datetime
+        nullable: true
+      isBlacklisted:
+        type: bool
+        default: false
+      blacklistReason:
+        type: string
+        nullable: true
+        maxLength: 250
+      note:
+        type: text
+        nullable: true
+    relations:
+      vehicleType:
+        kind: many-to-one
+        target: VehicleType
+        nullable: true
+    externalRefs:
+      vehicle:
+        target: platform/Vehicle
+        store: VehicleId
+        via: grpc
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin, Operator]
+      update: [TenantAdmin, Operator]
+      delete: [TenantAdmin]
+    filterable:
+    - VehicleId
+    - VehicleTypeId
+    - IsBlacklisted
+    appendOnly: false
+    paginated: true
+    sortable: true
+    searchable: true
+  Weighing:
+    props:
+      ticketNo:
+        type: string
+        maxLength: 30
+      direction:
+        type: enum
+        values: [Inbound, Outbound]
+      status:
+        type: enum
+        values: [Open, Completed, Cancelled]
+      plate:
+        type: string
+        maxLength: 15
+      trailerId:
+        type: guid
+        nullable: true
+      trailerPlate:
+        type: string
+        nullable: true
+        maxLength: 15
+      driverId:
+        type: guid
+        nullable: true
+      driverName:
+        type: string
+        nullable: true
+        maxLength: 150
+      driverPhone:
+        type: string
+        nullable: true
+        maxLength: 20
+      firstWeightKg: decimal
+      firstWeighedAt: datetime
+      firstIsManual:
+        type: bool
+        default: false
+      secondWeighbridgeId:
+        type: guid
+        nullable: true
+      secondWeightKg:
+        type: decimal
+        nullable: true
+      secondWeighedAt:
+        type: datetime
+        nullable: true
+      secondIsManual:
+        type: bool
+        default: false
+      grossKg:
+        type: decimal
+        nullable: true
+      tareKg:
+        type: decimal
+        nullable: true
+      netKg:
+        type: decimal
+        nullable: true
+      tareSource:
+        type: enum
+        nullable: true
+        values: [Measured, Stored]
+      cancelReason:
+        type: string
+        nullable: true
+        maxLength: 250
+      note:
+        type: text
+        nullable: true
+    relations:
+      station:
+        kind: many-to-one
+        target: Station
+        nullable: false
+      weighbridge:
+        kind: many-to-one
+        target: Weighbridge
+        nullable: false
+      company:
+        kind: many-to-one
+        target: Company
+        nullable: true
+      material:
+        kind: many-to-one
+        target: Material
+        nullable: false
+    externalRefs:
+      vehicle:
+        target: platform/Vehicle
+        store: VehicleId
+        via: grpc
+    publishes:
+    - created
+    - updated
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin, Operator]
+      update: [TenantAdmin, Operator]
+      delete: [TenantAdmin]
+    filterable:
+    - StationId
+    - WeighbridgeId
+    - CompanyId
+    - MaterialId
+    - VehicleId
+    - DriverId
+    - Status
+    - Direction
+    - Plate
+    - TicketNo
+    appendOnly: false
+    paginated: true
+    sortable: true
+    searchable: true
+  WeighingPhoto:
+    props:
+      stage:
+        type: enum
+        values: [First, Second]
+      cameraName:
+        type: string
+        nullable: true
+        maxLength: 50
+      url:
+        type: string
+        maxLength: 500
+      takenAt: datetime
+    relations:
+      weighing:
+        kind: many-to-one
+        target: Weighing
+        nullable: false
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin, Operator]
+    filterable:
+    - WeighingId
+    - Stage
+    appendOnly: true
+    paginated: true
+    sortable: true
+    searchable: true
+  WeighingAuditLog:
+    props:
+      action:
+        type: enum
+        values: [ManualWeight, TareChange, Cancel, Edit]
+      fieldName:
+        type: string
+        nullable: true
+        maxLength: 50
+      oldValue:
+        type: string
+        nullable: true
+        maxLength: 250
+      newValue:
+        type: string
+        nullable: true
+        maxLength: 250
+      reason:
+        type: string
+        nullable: true
+        maxLength: 250
+    relations:
+      weighing:
+        kind: many-to-one
+        target: Weighing
+        nullable: false
+    access:
+      list: [TenantAdmin]
+      getById: [TenantAdmin]
+      create: [TenantAdmin, Operator]
+    filterable:
+    - WeighingId
+    - Action
+    appendOnly: true
+    paginated: true
+    sortable: true
+    searchable: true
+  Waybill:
+    props:
+      waybillNo:
+        type: string
+        maxLength: 30
+      waybillType:
+        type: enum
+        values: [Paper, EDespatch]
+      issuedAt: datetime
+      deliveryAddress:
+        type: text
+        nullable: true
+      eDespatchUuid:
+        type: guid
+        nullable: true
+      eDespatchStatus:
+        type: enum
+        nullable: true
+        values: [Draft, Sent, Accepted, Rejected]
+      erpSyncStatus:
+        type: enum
+        values: [Pending, Sent, Failed]
+      erpDocNo:
+        type: string
+        nullable: true
+        maxLength: 50
+      erpSyncedAt:
+        type: datetime
+        nullable: true
+      erpError:
+        type: text
+        nullable: true
+    relations:
+      weighing:
+        kind: one-to-one
+        target: Weighing
+        nullable: false
+    publishes:
+    - created
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin, Operator]
+      update: [TenantAdmin, Operator]
+      delete: [TenantAdmin]
+    filterable:
+    - WeighingId
+    - WaybillNo
+    - WaybillType
+    - ErpSyncStatus
+    - EDespatchStatus
+    appendOnly: false
+    paginated: true
+    sortable: true
+    searchable: true
+auth:
+  authority: http://host.docker.internal:8081
+  audience: baseforge-api
+  requireHttpsMetadata: false
+  protect: true
+  defaultAccess: [TenantAdmin, Operator]
+  superRoles:
+  - SuperAdmin
+dockerPorts:
+  rest: 8083
+  grpc: 8084
+  postgres: 5433
+multiTenant: true

@@ -1,0 +1,233 @@
+service: platform
+database: prokantar_platform_db
+entities:
+  Carrier:
+    props:
+      ownerUserId: guid
+      name:
+        type: string
+        maxLength: 200
+      taxNo:
+        type: string
+        nullable: true
+        maxLength: 11
+      taxOffice:
+        type: string
+        nullable: true
+        maxLength: 100
+      phone:
+        type: string
+        nullable: true
+        maxLength: 20
+      address:
+        type: text
+        nullable: true
+    access:
+      list: authenticated
+      getById: authenticated
+      create: [Driver, TenantAdmin, Operator]
+      update: [owner]
+      delete: [SuperAdmin]
+    ownerField: OwnerUserId
+    filterable:
+    - TaxNo
+    appendOnly: false
+    paginated: true
+    sortable: true
+    searchable: true
+  Driver:
+    props:
+      userId: guid
+      fullName:
+        type: string
+        maxLength: 150
+      phone:
+        type: string
+        maxLength: 20
+      nationalId:
+        type: string
+        nullable: true
+        maxLength: 11
+      licenseNo:
+        type: string
+        nullable: true
+        maxLength: 30
+      kvkkConsentAt:
+        type: datetime
+        nullable: true
+      locationConsent:
+        type: bool
+        default: false
+      isActive:
+        type: bool
+        default: true
+    relations:
+      carrier:
+        kind: many-to-one
+        target: Carrier
+        nullable: true
+    access:
+      list: [owner]
+      getById: [Operator, TenantAdmin, owner]
+      create: [Driver]
+      update: [owner]
+      delete: [SuperAdmin]
+    ownerField: UserId
+    filterable:
+    - CarrierId
+    - Phone
+    appendOnly: false
+    paginated: true
+    sortable: true
+    searchable: true
+  Vehicle:
+    props:
+      ownerUserId: guid
+      plate:
+        type: string
+        maxLength: 15
+      vehicleTypeCode:
+        type: string
+        nullable: true
+        maxLength: 30
+      brand:
+        type: string
+        nullable: true
+        maxLength: 50
+      model:
+        type: string
+        nullable: true
+        maxLength: 50
+      isClaimed:
+        type: bool
+        default: false
+    relations:
+      carrier:
+        kind: many-to-one
+        target: Carrier
+        nullable: true
+    access:
+      list: authenticated
+      getById: authenticated
+      create: [Driver, Operator, TenantAdmin]
+      update: [owner]
+      delete: [SuperAdmin]
+    ownerField: OwnerUserId
+    filterable:
+    - Plate
+    - CarrierId
+    - IsClaimed
+    appendOnly: false
+    paginated: true
+    sortable: true
+    searchable: true
+  Trailer:
+    props:
+      ownerUserId: guid
+      plate:
+        type: string
+        maxLength: 15
+    relations:
+      carrier:
+        kind: many-to-one
+        target: Carrier
+        nullable: true
+    access:
+      list: authenticated
+      getById: authenticated
+      create: [Driver, Operator, TenantAdmin]
+      update: [owner]
+      delete: [SuperAdmin]
+    ownerField: OwnerUserId
+    filterable:
+    - Plate
+    - CarrierId
+    appendOnly: false
+    paginated: true
+    sortable: true
+    searchable: true
+  DriverVehicle:
+    props:
+      userId: guid
+      startedAt: datetime
+      endedAt:
+        type: datetime
+        nullable: true
+    relations:
+      driver:
+        kind: many-to-one
+        target: Driver
+        nullable: false
+      vehicle:
+        kind: many-to-one
+        target: Vehicle
+        nullable: false
+      trailer:
+        kind: many-to-one
+        target: Trailer
+        nullable: true
+    access:
+      list: [Operator, TenantAdmin, owner]
+      getById: [Operator, TenantAdmin, owner]
+      create: [Driver]
+      update: [owner]
+      delete: [owner]
+    ownerField: UserId
+    filterable:
+    - DriverId
+    - VehicleId
+    appendOnly: false
+    paginated: true
+    sortable: true
+    searchable: true
+  Device:
+    props:
+      userId: guid
+      deviceIdentifier:
+        type: string
+        maxLength: 100
+      platform:
+        type: enum
+        values: [Android, Ios]
+      pushToken:
+        type: string
+        nullable: true
+        maxLength: 500
+      appVersion:
+        type: string
+        nullable: true
+        maxLength: 20
+      lastSeenAt:
+        type: datetime
+        nullable: true
+    relations:
+      driver:
+        kind: many-to-one
+        target: Driver
+        nullable: false
+    access:
+      list: [owner]
+      getById: [owner]
+      create: [Driver]
+      update: [owner]
+      delete: [owner]
+    ownerField: UserId
+    filterable:
+    - DriverId
+    appendOnly: false
+    paginated: true
+    sortable: true
+    searchable: true
+auth:
+  authority: http://host.docker.internal:8081
+  audience: baseforge-api
+  requireHttpsMetadata: false
+  protect: true
+  defaultAccess: authenticated
+  superRoles:
+  - SuperAdmin
+dockerPorts:
+  rest: 8085
+  grpc: 8086
+  postgres: 5434
+multiTenant: false

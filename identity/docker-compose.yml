@@ -1,0 +1,45 @@
+# identity merkez auth — izole test (servis + kendi PostgreSQL'i).
+#   docker compose up --build -d   ·   discovery: http://localhost:8081/.well-known/openid-configuration
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: baseforge
+      POSTGRES_PASSWORD: change_me
+      POSTGRES_DB: identity_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U baseforge -d identity_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"   # yerelde 'dotnet run' + sadece bu postgres'i container'da çalıştırmak için (appsettings.json ile eşleşir)
+    volumes:
+      - identity-pgdata:/var/lib/postgresql/data
+
+  identity:
+    build: .
+    env_file:
+      - .env   # gerçek secret'lar (Auth__Providers__*__ClientSecret, Auth__SeedAdmin__Password, ...)
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Auth__Issuer: "http://identity:8080/"
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=identity_db;Username=baseforge;Password=change_me"
+    ports:
+      - "8081:8080"   # REST/OpenIddict (HTTP/1.1)
+      - "8082:8081"   # gRPC (h2c) — merkez User entity'sine erişim
+    volumes:
+      - identity-avatars:/app/wwwroot/uploads   # profil fotoğrafları — container recreate'te kaybolmasın
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  identity-pgdata:
+  identity-avatars:

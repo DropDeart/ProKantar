@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+option csharp_namespace = "Kantar.Grpc";
+
+package kantar;
+
+// BaseForge.CodeGen tarafından üretildi — WeighingAuditLog entity'sine diğer servislerin
+// salt-okunur gRPC erişimi. Servis adı (WeighingAuditLogService), C# implementasyon sınıfıyla
+// (WeighingAuditLogGrpcService) çakışmasın diye ayrı tutulur.
+service WeighingAuditLogService {
+  rpc GetById (WeighingAuditLogByIdRequest) returns (WeighingAuditLogMessage);
+}
+
+message WeighingAuditLogByIdRequest {
+  string id = 1;
+}
+
+message WeighingAuditLogMessage {
+  string id = 1;
+  string action = 2;
+  string field_name = 3;
+  string old_value = 4;
+  string new_value = 5;
+  string reason = 6;
+}

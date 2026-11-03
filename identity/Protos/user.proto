@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option csharp_namespace = "Identity.Grpc";
+
+package identity;
+
+// Merkez kullanıcı entity'sine (ApplicationUser) diğer servislerin salt-okunur gRPC erişimi.
+// BaseForge.CodeGen auth.yaml'dan üretir (userProfile alanları 5'ten itibaren); "identity/User" dış
+// referansı olan servisler aynı auth.yaml'dan aynı dosyayı alır (bkz. docs/ARCH.md §6.3).
+service UserService {
+  rpc GetById (UserByIdRequest) returns (UserMessage);
+}
+
+message UserByIdRequest {
+  string id = 1;
+}
+
+message UserMessage {
+  string id = 1;
+  string user_name = 2;
+  string email = 3;
+  string full_name = 4;
+}

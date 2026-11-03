@@ -1,0 +1,15 @@
+service: identity
+database: identity_db
+roles:
+- SuperAdmin
+- TenantAdmin
+- Operator
+- Driver
+registration:
+  enabled: false
+  defaultRole: User
+providers: {}
+dockerPorts:
+  rest: 8081
+  grpc: 8082
+  postgres: 5432

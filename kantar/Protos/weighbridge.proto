@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+option csharp_namespace = "Kantar.Grpc";
+
+package kantar;
+
+// BaseForge.CodeGen tarafından üretildi — Weighbridge entity'sine diğer servislerin
+// salt-okunur gRPC erişimi. Servis adı (WeighbridgeService), C# implementasyon sınıfıyla
+// (WeighbridgeGrpcService) çakışmasın diye ayrı tutulur.
+service WeighbridgeService {
+  rpc GetById (WeighbridgeByIdRequest) returns (WeighbridgeMessage);
+}
+
+message WeighbridgeByIdRequest {
+  string id = 1;
+}
+
+message WeighbridgeMessage {
+  string id = 1;
+  string name = 2;
+  string serial_no = 3;
+  string capacity_kg = 4;
+  string connection_type = 5;
+  string connection_info = 6;
+  string calibration_valid_until = 7;
+  bool is_active = 8;
+}

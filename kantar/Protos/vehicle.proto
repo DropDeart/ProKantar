@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+option csharp_namespace = "Platform.Grpc";
+
+package platform;
+
+// BaseForge.CodeGen tarafından üretildi — Vehicle entity'sine diğer servislerin
+// salt-okunur gRPC erişimi. Servis adı (VehicleService), C# implementasyon sınıfıyla
+// (VehicleGrpcService) çakışmasın diye ayrı tutulur.
+service VehicleService {
+  rpc GetById (VehicleByIdRequest) returns (VehicleMessage);
+}
+
+message VehicleByIdRequest {
+  string id = 1;
+}
+
+message VehicleMessage {
+  string id = 1;
+  string owner_user_id = 2;
+  string plate = 3;
+  string vehicle_type_code = 4;
+  string brand = 5;
+  string model = 6;
+  bool is_claimed = 7;
+}

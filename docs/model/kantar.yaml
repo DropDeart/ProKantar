@@ -1,0 +1,278 @@
+# ProKantar — kantar — kiracı (MultiTenant: true) · BaseForge generate
+# Kaynak: docs/model/gen_prokantar.py (ER şemasıyla birlikte üretilir; elle düzenleme yerine oradan değiştir).
+service: kantar
+database: prokantar_kantar_db
+multiTenant: true                # tüm entity'ler TenantId + query filter; tenant_id JWT'den
+
+auth:                            # ZORUNLU: roller ve tenant_id JWT'den okunur
+  authority: http://host.docker.internal:8081   # identity REST
+  audience: baseforge-api
+  requireHttpsMetadata: false
+  protect: true
+  defaultAccess: [TenantAdmin, Operator]
+  superRoles: [SuperAdmin]          # NOT: tenant filtresini aşmaz (BaseForge §6.1)
+
+dockerPorts:                     # identity: 8081/8082/5432
+  rest: 8083
+  grpc: 8084
+  postgres: 5433
+
+entities:
+  Station:
+    filterable: [IsActive]
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin]
+      update: [TenantAdmin]
+      delete: [TenantAdmin]
+    props:
+      name: { type: string, maxLength: 150 }
+      code: { type: string, maxLength: 30 }
+      address: { type: text, nullable: true }
+      phone: { type: string, nullable: true, maxLength: 20 }
+      isActive: { type: bool, default: "true" }
+
+  Weighbridge:
+    filterable: [StationId, IsActive]
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin]
+      update: [TenantAdmin]
+      delete: [TenantAdmin]
+    props:
+      name: { type: string, maxLength: 100 }
+      serialNo: { type: string, nullable: true, maxLength: 50 }
+      capacityKg: decimal
+      connectionType: { type: enum, values: [Serial, Tcp], nullable: true }
+      connectionInfo: { type: json, nullable: true }                          # port, baud, ip...
+      calibrationValidUntil: { type: date, nullable: true }
+      isActive: { type: bool, default: "true" }
+    relations:
+      station:
+        kind: many-to-one
+        target: Station
+
+  Machine:
+    filterable: [StationId, IsActive]
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin]
+      update: [TenantAdmin]
+      delete: [TenantAdmin]
+    props:
+      name: { type: string, maxLength: 100 }
+      machineType: { type: string, maxLength: 50 }
+      plateOrSerial: { type: string, nullable: true, maxLength: 50 }
+      isActive: { type: bool, default: "true" }
+    relations:
+      station:
+        kind: many-to-one
+        target: Station
+
+  Company:
+    filterable: [IsCustomer, IsSupplier, IsCarrier, IsActive, TaxNo]
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin]
+      update: [TenantAdmin]
+      delete: [TenantAdmin]
+    props:
+      name: { type: string, maxLength: 200 }
+      shortName: { type: string, nullable: true, maxLength: 50 }
+      taxNo: { type: string, nullable: true, maxLength: 11 }
+      taxOffice: { type: string, nullable: true, maxLength: 100 }
+      isCustomer: { type: bool, default: "false" }
+      isSupplier: { type: bool, default: "false" }
+      isCarrier: { type: bool, default: "false" }
+      phone: { type: string, nullable: true, maxLength: 20 }
+      email: { type: string, nullable: true, maxLength: 150 }
+      address: { type: text, nullable: true }
+      isActive: { type: bool, default: "true" }
+
+  ErpCompanyLink:
+    filterable: [CompanyId, ErpSystem, ErpCode]
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin]
+      update: [TenantAdmin]
+      delete: [TenantAdmin]
+    props:
+      erpSystem: { type: string, maxLength: 30 }                              # Netsis/Logo/Mikro...
+      erpCode: { type: string, maxLength: 50 }
+      isDefault: { type: bool, default: "true" }
+    relations:
+      company:
+        kind: many-to-one
+        target: Company
+
+  VehicleType:
+    filterable: [Code]
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin]
+      update: [TenantAdmin]
+      delete: [TenantAdmin]
+    props:
+      code: { type: string, maxLength: 30 }
+      name: { type: string, maxLength: 50 }
+      maxGrossKg: { type: decimal, nullable: true }
+
+  Material:
+    filterable: [Code, Unit, IsActive]
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin]
+      update: [TenantAdmin]
+      delete: [TenantAdmin]
+    props:
+      code: { type: string, maxLength: 50 }                                   # stok kodu, kiracı içinde UNIQUE elle
+      name: { type: string, maxLength: 200 }
+      unit: { type: enum, values: [Kg, Ton, M3, Piece] }
+      kgPerUnit: { type: decimal, nullable: true }                            # ton=1000, m3=yoğunluk
+      erpStockCode: { type: string, nullable: true, maxLength: 50 }
+      isActive: { type: bool, default: "true" }
+
+  TenantVehicle:
+    filterable: [VehicleId, VehicleTypeId, IsBlacklisted]
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin, Operator]
+      update: [TenantAdmin, Operator]
+      delete: [TenantAdmin]
+    props:
+      storedTareKg: { type: decimal, nullable: true }
+      storedTareAt: { type: datetime, nullable: true }
+      isBlacklisted: { type: bool, default: "false" }
+      blacklistReason: { type: string, nullable: true, maxLength: 250 }
+      note: { type: text, nullable: true }
+    relations:
+      vehicleType:
+        kind: many-to-one
+        target: VehicleType
+        nullable: true
+    externalRefs:
+      vehicle:
+        target: platform/Vehicle
+        store: VehicleId
+        via: grpc
+
+  Weighing:
+    publishes: [created, updated]
+    filterable: [StationId, WeighbridgeId, CompanyId, MaterialId, VehicleId, DriverId, Status, Direction, Plate, TicketNo]
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin, Operator]
+      update: [TenantAdmin, Operator]
+      delete: [TenantAdmin]
+    props:
+      ticketNo: { type: string, maxLength: 30 }                               # kiracı+istasyon içinde UNIQUE elle
+      direction: { type: enum, values: [Inbound, Outbound] }                  # Giriş/Alış · Çıkış/Satış
+      status: { type: enum, values: [Open, Completed, Cancelled] }
+      plate: { type: string, maxLength: 15 }                                  # snapshot
+      trailerId: { type: guid, nullable: true }                               # platform/Trailer (yalnız ID)
+      trailerPlate: { type: string, nullable: true, maxLength: 15 }           # snapshot
+      driverId: { type: guid, nullable: true }                                # platform/Driver (yalnız ID) - kayıtsız şoför null
+      driverName: { type: string, nullable: true, maxLength: 150 }            # snapshot
+      driverPhone: { type: string, nullable: true, maxLength: 20 }            # snapshot
+      firstWeightKg: decimal
+      firstWeighedAt: datetime
+      firstIsManual: { type: bool, default: "false" }
+      secondWeighbridgeId: { type: guid, nullable: true }                     # FK elle (aynı hedefe 2. ilişki)
+      secondWeightKg: { type: decimal, nullable: true }
+      secondWeighedAt: { type: datetime, nullable: true }
+      secondIsManual: { type: bool, default: "false" }
+      grossKg: { type: decimal, nullable: true }                              # sunucu hesaplar
+      tareKg: { type: decimal, nullable: true }                               # sunucu hesaplar
+      netKg: { type: decimal, nullable: true }                                # sunucu hesaplar
+      tareSource: { type: enum, values: [Measured, Stored], nullable: true }
+      cancelReason: { type: string, nullable: true, maxLength: 250 }
+      note: { type: text, nullable: true }
+    relations:
+      station:
+        kind: many-to-one
+        target: Station
+      weighbridge:
+        kind: many-to-one
+        target: Weighbridge
+      company:
+        kind: many-to-one
+        target: Company
+        nullable: true
+      material:
+        kind: many-to-one
+        target: Material
+    externalRefs:
+      vehicle:
+        target: platform/Vehicle
+        store: VehicleId
+        via: grpc
+
+  WeighingPhoto:
+    appendOnly: true
+    filterable: [WeighingId, Stage]
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin, Operator]
+    props:
+      stage: { type: enum, values: [First, Second] }
+      cameraName: { type: string, nullable: true, maxLength: 50 }
+      url: { type: string, maxLength: 500 }
+      takenAt: datetime
+    relations:
+      weighing:
+        kind: many-to-one
+        target: Weighing
+
+  WeighingAuditLog:
+    appendOnly: true
+    filterable: [WeighingId, Action]
+    access:
+      list: [TenantAdmin]
+      getById: [TenantAdmin]
+      create: [TenantAdmin, Operator]
+    props:
+      action: { type: enum, values: [ManualWeight, TareChange, Cancel, Edit] }
+      fieldName: { type: string, nullable: true, maxLength: 50 }
+      oldValue: { type: string, nullable: true, maxLength: 250 }
+      newValue: { type: string, nullable: true, maxLength: 250 }
+      reason: { type: string, nullable: true, maxLength: 250 }
+    relations:
+      weighing:
+        kind: many-to-one
+        target: Weighing
+
+  Waybill:
+    publishes: [created]
+    filterable: [WeighingId, WaybillNo, WaybillType, ErpSyncStatus, EDespatchStatus]
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin, Operator]
+      update: [TenantAdmin, Operator]
+      delete: [TenantAdmin]
+    props:
+      waybillNo: { type: string, maxLength: 30 }
+      waybillType: { type: enum, values: [Paper, EDespatch] }
+      issuedAt: datetime
+      deliveryAddress: { type: text, nullable: true }
+      eDespatchUuid: { type: guid, nullable: true }
+      eDespatchStatus: { type: enum, values: [Draft, Sent, Accepted, Rejected], nullable: true }
+      erpSyncStatus: { type: enum, values: [Pending, Sent, Failed] }
+      erpDocNo: { type: string, nullable: true, maxLength: 50 }
+      erpSyncedAt: { type: datetime, nullable: true }
+      erpError: { type: text, nullable: true }
+    relations:
+      weighing:
+        kind: one-to-one
+        target: Weighing
+

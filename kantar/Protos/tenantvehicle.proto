@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+option csharp_namespace = "Kantar.Grpc";
+
+package kantar;
+
+// BaseForge.CodeGen tarafından üretildi — TenantVehicle entity'sine diğer servislerin
+// salt-okunur gRPC erişimi. Servis adı (TenantVehicleService), C# implementasyon sınıfıyla
+// (TenantVehicleGrpcService) çakışmasın diye ayrı tutulur.
+service TenantVehicleService {
+  rpc GetById (TenantVehicleByIdRequest) returns (TenantVehicleMessage);
+}
+
+message TenantVehicleByIdRequest {
+  string id = 1;
+}
+
+message TenantVehicleMessage {
+  string id = 1;
+  string stored_tare_kg = 2;
+  string stored_tare_at = 3;
+  bool is_blacklisted = 4;
+  string blacklist_reason = 5;
+  string note = 6;
+}

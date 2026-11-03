@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+option csharp_namespace = "Kantar.Grpc";
+
+package kantar;
+
+// BaseForge.CodeGen tarafından üretildi — Machine entity'sine diğer servislerin
+// salt-okunur gRPC erişimi. Servis adı (MachineService), C# implementasyon sınıfıyla
+// (MachineGrpcService) çakışmasın diye ayrı tutulur.
+service MachineService {
+  rpc GetById (MachineByIdRequest) returns (MachineMessage);
+}
+
+message MachineByIdRequest {
+  string id = 1;
+}
+
+message MachineMessage {
+  string id = 1;
+  string name = 2;
+  string machine_type = 3;
+  string plate_or_serial = 4;
+  bool is_active = 5;
+}

@@ -1,0 +1,11 @@
+# Bu bloğu kök docker-compose.yml'a ekleyin (postgres servisinin yanına).
+# RabbitMq'ya bağlanır: kökteki docker-compose.yml'daki paylaşılan broker.
+# Merkezi log toplama (Grafana Loki + Grafana): workspace'teki ../observability klasörü.
+services:
+  kantar-service:
+    build: .
+    environment:
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=prokantar_kantar_db;Username=baseforge;Password=change_me"
+    depends_on:
+      postgres:
+        condition: service_healthy

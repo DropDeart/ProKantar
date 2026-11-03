@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option csharp_namespace = "Kantar.Grpc";
+
+package kantar;
+
+// BaseForge.CodeGen tarafından üretildi — VehicleType entity'sine diğer servislerin
+// salt-okunur gRPC erişimi. Servis adı (VehicleTypeService), C# implementasyon sınıfıyla
+// (VehicleTypeGrpcService) çakışmasın diye ayrı tutulur.
+service VehicleTypeService {
+  rpc GetById (VehicleTypeByIdRequest) returns (VehicleTypeMessage);
+}
+
+message VehicleTypeByIdRequest {
+  string id = 1;
+}
+
+message VehicleTypeMessage {
+  string id = 1;
+  string code = 2;
+  string name = 3;
+  string max_gross_kg = 4;
+}

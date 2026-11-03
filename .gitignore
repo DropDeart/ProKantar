@@ -1,0 +1,17 @@
+# .NET
+bin/
+obj/
+**/bin/
+**/obj/
+*.user
+*.suo
+.vs/
+.idea/
+
+# Secret'lar
+.env
+**/.env
+*.pfx
+*.p12
+*.pem
+*.key

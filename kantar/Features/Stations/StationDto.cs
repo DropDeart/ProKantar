@@ -15,6 +15,12 @@ public sealed class StationDto
     public string? Address { get; set; }
     /// <summary>Phone.</summary>
     public string? Phone { get; set; }
+    /// <summary>Latitude.</summary>
+    public decimal? Latitude { get; set; }
+    /// <summary>Longitude.</summary>
+    public decimal? Longitude { get; set; }
+    /// <summary>RadiusM.</summary>
+    public int RadiusM { get; set; } = 300;
     /// <summary>IsActive.</summary>
     public bool IsActive { get; set; } = true;
 
@@ -29,6 +35,9 @@ public sealed class StationDto
             Code = entity.Code,
             Address = entity.Address,
             Phone = entity.Phone,
+            Latitude = entity.Latitude,
+            Longitude = entity.Longitude,
+            RadiusM = entity.RadiusM,
             IsActive = entity.IsActive,
         };
     }

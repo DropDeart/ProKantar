@@ -31,6 +31,9 @@ entities:
       code: { type: string, maxLength: 30 }
       address: { type: text, nullable: true }
       phone: { type: string, nullable: true, maxLength: 20 }
+      latitude: { type: decimal, nullable: true }                             # WGS84; durak/varış tespiti için
+      longitude: { type: decimal, nullable: true }
+      radiusM: { type: int, default: "300" }                                  # varış yarıçapı (m); saha poligonu tracking/Geofence'te
       isActive: { type: bool, default: "true" }
 
   Weighbridge:
@@ -92,6 +95,28 @@ entities:
       email: { type: string, nullable: true, maxLength: 150 }
       address: { type: text, nullable: true }
       isActive: { type: bool, default: "true" }
+
+  DeliveryLocation:
+    filterable: [CompanyId, IsActive]
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin, Operator]
+      update: [TenantAdmin, Operator]
+      delete: [TenantAdmin]
+    props:
+      name: { type: string, maxLength: 150 }                                  # şantiye/depo adı
+      address: { type: text, nullable: true }
+      latitude: decimal                                                       # WGS84
+      longitude: decimal
+      radiusM: { type: int, default: "150" }                                  # varış yarıçapı (m)
+      contactName: { type: string, nullable: true, maxLength: 100 }
+      contactPhone: { type: string, nullable: true, maxLength: 20 }
+      isActive: { type: bool, default: "true" }
+    relations:
+      company:
+        kind: many-to-one
+        target: Company
 
   ErpCompanyLink:
     filterable: [CompanyId, ErpSystem, ErpCode]
@@ -210,6 +235,10 @@ entities:
       material:
         kind: many-to-one
         target: Material
+      shipment:
+        kind: many-to-one
+        target: Shipment
+        nullable: true
     externalRefs:
       vehicle:
         target: platform/Vehicle
@@ -253,7 +282,7 @@ entities:
 
   Waybill:
     publishes: [created]
-    filterable: [WeighingId, WaybillNo, WaybillType, ErpSyncStatus, EDespatchStatus]
+    filterable: [WeighingId, CompanyId, DeliveryLocationId, WaybillNo, WaybillType, ErpSyncStatus, EDespatchStatus]
     access:
       list: [TenantAdmin, Operator]
       getById: [TenantAdmin, Operator]
@@ -264,7 +293,8 @@ entities:
       waybillNo: { type: string, maxLength: 30 }
       waybillType: { type: enum, values: [Paper, EDespatch] }
       issuedAt: datetime
-      deliveryAddress: { type: text, nullable: true }
+      quantityKg: { type: decimal, nullable: true }                           # çoklu teslimde bu irsaliyenin payı; null = tartımın tamamı
+      deliveryAddress: { type: text, nullable: true }                         # snapshot
       eDespatchUuid: { type: guid, nullable: true }
       eDespatchStatus: { type: enum, values: [Draft, Sent, Accepted, Rejected], nullable: true }
       erpSyncStatus: { type: enum, values: [Pending, Sent, Failed] }
@@ -273,6 +303,76 @@ entities:
       erpError: { type: text, nullable: true }
     relations:
       weighing:
-        kind: one-to-one
+        kind: many-to-one
         target: Weighing
+      company:
+        kind: many-to-one
+        target: Company
+        nullable: true
+      deliveryLocation:
+        kind: many-to-one
+        target: DeliveryLocation
+        nullable: true
+
+  Shipment:
+    filterable: [StationId, VehicleId, DriverId, Direction, Status, Plate]
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin, Operator]
+      update: [TenantAdmin, Operator]
+      delete: [TenantAdmin]
+    props:
+      shipmentNo: { type: string, maxLength: 30 }
+      direction: { type: enum, values: [Inbound, Outbound] }                  # Inbound = gelen araç randevusu
+      status: { type: enum, values: [Draft, Dispatched, InProgress, Completed, Cancelled] }# Dispatched'a yalnız elle yazılan DispatchShipment komutu geçirir
+      plannedAt: datetime
+      plate: { type: string, maxLength: 15 }                                  # snapshot
+      driverId: { type: guid, nullable: true }                                # platform/Driver (yalnız ID)
+      driverName: { type: string, nullable: true, maxLength: 150 }            # snapshot
+      dispatchedAt: { type: datetime, nullable: true }
+      note: { type: text, nullable: true }
+    relations:
+      station:
+        kind: many-to-one
+        target: Station
+    externalRefs:
+      vehicle:
+        target: platform/Vehicle
+        store: VehicleId
+        via: grpc
+
+  ShipmentStop:
+    filterable: [ShipmentId, StopType, WaybillId]
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin, Operator]
+      update: [TenantAdmin, Operator]
+      delete: [TenantAdmin, Operator]
+    props:
+      sequence: int                                                           # 1'den başlayan sıra
+      stopType: { type: enum, values: [Pickup, Weighbridge, Delivery] }
+      name: { type: string, maxLength: 150 }                                  # snapshot: lokasyon/istasyon adı
+      latitude: decimal                                                       # snapshot
+      longitude: decimal                                                      # snapshot
+      radiusM: { type: int, default: "150" }
+      plannedAt: { type: datetime, nullable: true }
+      note: { type: text, nullable: true }
+    relations:
+      shipment:
+        kind: many-to-one
+        target: Shipment
+      deliveryLocation:
+        kind: many-to-one
+        target: DeliveryLocation
+        nullable: true
+      station:
+        kind: many-to-one
+        target: Station
+        nullable: true
+      waybill:
+        kind: many-to-one
+        target: Waybill
+        nullable: true
 

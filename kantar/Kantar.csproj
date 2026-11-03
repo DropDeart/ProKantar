@@ -24,6 +24,7 @@
     <Protobuf Include="Protos/weighbridge.proto" GrpcServices="Server" />
     <Protobuf Include="Protos/machine.proto" GrpcServices="Server" />
     <Protobuf Include="Protos/company.proto" GrpcServices="Server" />
+    <Protobuf Include="Protos/deliverylocation.proto" GrpcServices="Server" />
     <Protobuf Include="Protos/erpcompanylink.proto" GrpcServices="Server" />
     <Protobuf Include="Protos/vehicletype.proto" GrpcServices="Server" />
     <Protobuf Include="Protos/material.proto" GrpcServices="Server" />
@@ -32,6 +33,8 @@
     <Protobuf Include="Protos/weighingphoto.proto" GrpcServices="Server" />
     <Protobuf Include="Protos/weighingauditlog.proto" GrpcServices="Server" />
     <Protobuf Include="Protos/waybill.proto" GrpcServices="Server" />
+    <Protobuf Include="Protos/shipment.proto" GrpcServices="Server" />
+    <Protobuf Include="Protos/shipmentstop.proto" GrpcServices="Server" />
     <Protobuf Include="Protos/vehicle.proto" GrpcServices="Client" />
   </ItemGroup>
 

@@ -15,3 +15,7 @@ obj/
 *.p12
 *.pem
 *.key
+
+# Kullanıcı yüklemeleri (klasör .gitkeep ile kalır)
+**/wwwroot/uploads/*
+!**/wwwroot/uploads/.gitkeep

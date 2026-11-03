@@ -59,6 +59,8 @@ public sealed class WeighingDto
     public Guid? CompanyId { get; set; }
     /// <summary>MaterialId.</summary>
     public Guid MaterialId { get; set; }
+    /// <summary>ShipmentId.</summary>
+    public Guid? ShipmentId { get; set; }
     /// <summary>VehicleId.</summary>
     public Guid VehicleId { get; set; }
 
@@ -95,6 +97,7 @@ public sealed class WeighingDto
             WeighbridgeId = entity.WeighbridgeId,
             CompanyId = entity.CompanyId,
             MaterialId = entity.MaterialId,
+            ShipmentId = entity.ShipmentId,
             VehicleId = entity.VehicleId,
         };
     }

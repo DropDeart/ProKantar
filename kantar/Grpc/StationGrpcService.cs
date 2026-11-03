@@ -29,6 +29,9 @@ public sealed class StationGrpcService(ISender sender) : StationService.StationS
             Code = value.Code,
             Address = value.Address ?? string.Empty,
             Phone = value.Phone ?? string.Empty,
+            Latitude = value.Latitude?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+            Longitude = value.Longitude?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+            RadiusM = value.RadiusM,
             IsActive = value.IsActive,
         };
     }

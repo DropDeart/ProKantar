@@ -18,6 +18,12 @@ public sealed class Station : BaseEntity, ITenantEntity
     /// <summary>Phone.</summary>
     [MaxLength(20)]
     public string? Phone { get; set; }
+    /// <summary>Latitude.</summary>
+    public decimal? Latitude { get; set; }
+    /// <summary>Longitude.</summary>
+    public decimal? Longitude { get; set; }
+    /// <summary>RadiusM.</summary>
+    public int RadiusM { get; set; } = 300;
     /// <summary>IsActive.</summary>
     public bool IsActive { get; set; } = true;
     /// <summary>TenantId.</summary>

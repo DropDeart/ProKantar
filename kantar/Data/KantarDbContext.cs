@@ -22,6 +22,8 @@ public sealed class KantarDbContext : BaseForgeDbContext
     public DbSet<Machine> Machines => Set<Machine>();
     /// <summary>Company tablosu.</summary>
     public DbSet<Company> Companies => Set<Company>();
+    /// <summary>DeliveryLocation tablosu.</summary>
+    public DbSet<DeliveryLocation> DeliveryLocations => Set<DeliveryLocation>();
     /// <summary>ErpCompanyLink tablosu.</summary>
     public DbSet<ErpCompanyLink> ErpCompanyLinks => Set<ErpCompanyLink>();
     /// <summary>VehicleType tablosu.</summary>
@@ -38,6 +40,10 @@ public sealed class KantarDbContext : BaseForgeDbContext
     public DbSet<WeighingAuditLog> WeighingAuditLogs => Set<WeighingAuditLog>();
     /// <summary>Waybill tablosu.</summary>
     public DbSet<Waybill> Waybills => Set<Waybill>();
+    /// <summary>Shipment tablosu.</summary>
+    public DbSet<Shipment> Shipments => Set<Shipment>();
+    /// <summary>ShipmentStop tablosu.</summary>
+    public DbSet<ShipmentStop> ShipmentStops => Set<ShipmentStop>();
 
     /// <summary>
     /// Enum alanlar veritabanında sayı değil, değer adıyla (string) saklanır — enum'a değer eklenip sırası
@@ -57,5 +63,8 @@ public sealed class KantarDbContext : BaseForgeDbContext
         configurationBuilder.Properties<WaybillWaybillType>().HaveConversion<string>();
         configurationBuilder.Properties<WaybillEDespatchStatus>().HaveConversion<string>();
         configurationBuilder.Properties<WaybillErpSyncStatus>().HaveConversion<string>();
+        configurationBuilder.Properties<ShipmentDirection>().HaveConversion<string>();
+        configurationBuilder.Properties<ShipmentStatus>().HaveConversion<string>();
+        configurationBuilder.Properties<ShipmentStopStopType>().HaveConversion<string>();
     }
 }

@@ -16,6 +16,15 @@ entities:
         type: string
         nullable: true
         maxLength: 20
+      latitude:
+        type: decimal
+        nullable: true
+      longitude:
+        type: decimal
+        nullable: true
+      radiusM:
+        type: int
+        default: 300
       isActive:
         type: bool
         default: true
@@ -157,6 +166,48 @@ entities:
     - IsCarrier
     - IsActive
     - TaxNo
+    appendOnly: false
+    paginated: true
+    sortable: true
+    searchable: true
+  DeliveryLocation:
+    props:
+      name:
+        type: string
+        maxLength: 150
+      address:
+        type: text
+        nullable: true
+      latitude: decimal
+      longitude: decimal
+      radiusM:
+        type: int
+        default: 150
+      contactName:
+        type: string
+        nullable: true
+        maxLength: 100
+      contactPhone:
+        type: string
+        nullable: true
+        maxLength: 20
+      isActive:
+        type: bool
+        default: true
+    relations:
+      company:
+        kind: many-to-one
+        target: Company
+        nullable: false
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin, Operator]
+      update: [TenantAdmin, Operator]
+      delete: [TenantAdmin]
+    filterable:
+    - CompanyId
+    - IsActive
     appendOnly: false
     paginated: true
     sortable: true
@@ -377,6 +428,10 @@ entities:
         kind: many-to-one
         target: Material
         nullable: false
+      shipment:
+        kind: many-to-one
+        target: Shipment
+        nullable: true
     externalRefs:
       vehicle:
         target: platform/Vehicle
@@ -481,6 +536,9 @@ entities:
         type: enum
         values: [Paper, EDespatch]
       issuedAt: datetime
+      quantityKg:
+        type: decimal
+        nullable: true
       deliveryAddress:
         type: text
         nullable: true
@@ -506,9 +564,17 @@ entities:
         nullable: true
     relations:
       weighing:
-        kind: one-to-one
+        kind: many-to-one
         target: Weighing
         nullable: false
+      company:
+        kind: many-to-one
+        target: Company
+        nullable: true
+      deliveryLocation:
+        kind: many-to-one
+        target: DeliveryLocation
+        nullable: true
     publishes:
     - created
     access:
@@ -519,10 +585,118 @@ entities:
       delete: [TenantAdmin]
     filterable:
     - WeighingId
+    - CompanyId
+    - DeliveryLocationId
     - WaybillNo
     - WaybillType
     - ErpSyncStatus
     - EDespatchStatus
+    appendOnly: false
+    paginated: true
+    sortable: true
+    searchable: true
+  Shipment:
+    props:
+      shipmentNo:
+        type: string
+        maxLength: 30
+      direction:
+        type: enum
+        values: [Inbound, Outbound]
+      status:
+        type: enum
+        values: [Draft, Dispatched, InProgress, Completed, Cancelled]
+      plannedAt: datetime
+      plate:
+        type: string
+        maxLength: 15
+      driverId:
+        type: guid
+        nullable: true
+      driverName:
+        type: string
+        nullable: true
+        maxLength: 150
+      dispatchedAt:
+        type: datetime
+        nullable: true
+      note:
+        type: text
+        nullable: true
+    relations:
+      station:
+        kind: many-to-one
+        target: Station
+        nullable: false
+    externalRefs:
+      vehicle:
+        target: platform/Vehicle
+        store: VehicleId
+        via: grpc
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin, Operator]
+      update: [TenantAdmin, Operator]
+      delete: [TenantAdmin]
+    filterable:
+    - StationId
+    - VehicleId
+    - DriverId
+    - Direction
+    - Status
+    - Plate
+    appendOnly: false
+    paginated: true
+    sortable: true
+    searchable: true
+  ShipmentStop:
+    props:
+      sequence: int
+      stopType:
+        type: enum
+        values: [Pickup, Weighbridge, Delivery]
+      name:
+        type: string
+        maxLength: 150
+      latitude: decimal
+      longitude: decimal
+      radiusM:
+        type: int
+        default: 150
+      plannedAt:
+        type: datetime
+        nullable: true
+      note:
+        type: text
+        nullable: true
+    relations:
+      shipment:
+        kind: many-to-one
+        target: Shipment
+        nullable: false
+      deliveryLocation:
+        kind: many-to-one
+        target: DeliveryLocation
+        nullable: true
+      station:
+        kind: many-to-one
+        target: Station
+        nullable: true
+      waybill:
+        kind: many-to-one
+        target: Waybill
+        nullable: true
+    access:
+      list: [TenantAdmin, Operator]
+      getById: [TenantAdmin, Operator]
+      create: [TenantAdmin, Operator]
+      update: [TenantAdmin, Operator]
+      delete: [TenantAdmin, Operator]
+    filterable:
+    - ShipmentId
+    - StopType
+    - WaybillId
     appendOnly: false
     paginated: true
     sortable: true

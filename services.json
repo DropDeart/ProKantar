@@ -13,7 +13,7 @@
       "restPort": 8083,
       "grpcPort": 8084,
       "postgresPort": 5433,
-      "entityCount": 12,
+      "entityCount": 15,
       "isIdentity": false,
       "authority": "http://host.docker.internal:8081",
       "audience": "baseforge-api",

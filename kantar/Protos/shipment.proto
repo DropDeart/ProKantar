@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+option csharp_namespace = "Kantar.Grpc";
+
+package kantar;
+
+// BaseForge.CodeGen tarafından üretildi — Shipment entity'sine diğer servislerin
+// salt-okunur gRPC erişimi. Servis adı (ShipmentService), C# implementasyon sınıfıyla
+// (ShipmentGrpcService) çakışmasın diye ayrı tutulur.
+service ShipmentService {
+  rpc GetById (ShipmentByIdRequest) returns (ShipmentMessage);
+}
+
+message ShipmentByIdRequest {
+  string id = 1;
+}
+
+message ShipmentMessage {
+  string id = 1;
+  string shipment_no = 2;
+  string direction = 3;
+  string status = 4;
+  string planned_at = 5;
+  string plate = 6;
+  string driver_id = 7;
+  string driver_name = 8;
+  string dispatched_at = 9;
+  string note = 10;
+}

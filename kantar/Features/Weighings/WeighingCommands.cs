@@ -68,6 +68,8 @@ public sealed class CreateWeighingCommand : ICommand<Guid>
     public Guid? CompanyId { get; set; }
     /// <summary>MaterialId.</summary>
     public Guid MaterialId { get; set; }
+    /// <summary>ShipmentId.</summary>
+    public Guid? ShipmentId { get; set; }
     /// <summary>VehicleId.</summary>
     public Guid VehicleId { get; set; }
 }
@@ -116,6 +118,7 @@ internal sealed class CreateWeighingHandler : ICommandHandler<CreateWeighingComm
             WeighbridgeId = request.WeighbridgeId,
             CompanyId = request.CompanyId,
             MaterialId = request.MaterialId,
+            ShipmentId = request.ShipmentId,
             VehicleId = request.VehicleId,
         };
         await _repository.AddAsync(entity, cancellationToken);
@@ -188,6 +191,8 @@ public sealed class UpdateWeighingCommand : ICommand
     public Guid? CompanyId { get; set; }
     /// <summary>MaterialId.</summary>
     public Guid MaterialId { get; set; }
+    /// <summary>ShipmentId.</summary>
+    public Guid? ShipmentId { get; set; }
     /// <summary>VehicleId.</summary>
     public Guid VehicleId { get; set; }
 }
@@ -236,6 +241,7 @@ internal sealed class UpdateWeighingHandler : ICommandHandler<UpdateWeighingComm
         entity.WeighbridgeId = request.WeighbridgeId;
         entity.CompanyId = request.CompanyId;
         entity.MaterialId = request.MaterialId;
+        entity.ShipmentId = request.ShipmentId;
         entity.VehicleId = request.VehicleId;
         await _repository.UpdateAsync(entity, cancellationToken);
         await _eventBus.PublishAsync(new WeighingUpdatedEvent { Data = WeighingDto.From(entity) }, cancellationToken);

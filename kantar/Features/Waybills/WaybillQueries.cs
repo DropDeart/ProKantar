@@ -32,6 +32,12 @@ public sealed class ListWaybillQuery : PagedRequest, IQuery<PagedResult<WaybillD
     /// <summary>Verilirse yalnızca WeighingId değeri buna eşit kayıtlar döner (<c>?weighingid=...</c>).</summary>
     public Guid? WeighingId { get; set; }
 
+    /// <summary>Verilirse yalnızca CompanyId değeri buna eşit kayıtlar döner (<c>?companyid=...</c>).</summary>
+    public Guid? CompanyId { get; set; }
+
+    /// <summary>Verilirse yalnızca DeliveryLocationId değeri buna eşit kayıtlar döner (<c>?deliverylocationid=...</c>).</summary>
+    public Guid? DeliveryLocationId { get; set; }
+
     /// <summary>Verilirse yalnızca WaybillNo değeri buna eşit kayıtlar döner (<c>?waybillno=...</c>).</summary>
     public string? WaybillNo { get; set; }
 
@@ -63,6 +69,16 @@ internal sealed class ListWaybillHandler : IQueryHandler<ListWaybillQuery, Paged
                 if (request.WeighingId is { } filterWeighingId)
                 {
                     query = query.Where(x => x.WeighingId == filterWeighingId);
+                }
+
+                if (request.CompanyId is { } filterCompanyId)
+                {
+                    query = query.Where(x => x.CompanyId == filterCompanyId);
+                }
+
+                if (request.DeliveryLocationId is { } filterDeliveryLocationId)
+                {
+                    query = query.Where(x => x.DeliveryLocationId == filterDeliveryLocationId);
                 }
 
                 if (request.WaybillNo is { } filterWaybillNo)

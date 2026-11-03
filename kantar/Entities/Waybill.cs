@@ -14,6 +14,8 @@ public sealed class Waybill : BaseEntity, ITenantEntity
     public WaybillWaybillType WaybillType { get; set; }
     /// <summary>IssuedAt.</summary>
     public DateTimeOffset IssuedAt { get; set; }
+    /// <summary>QuantityKg.</summary>
+    public decimal? QuantityKg { get; set; }
     /// <summary>DeliveryAddress.</summary>
     public string? DeliveryAddress { get; set; }
     /// <summary>EDespatchUuid.</summary>
@@ -31,8 +33,16 @@ public sealed class Waybill : BaseEntity, ITenantEntity
     public string? ErpError { get; set; }
     /// <summary>WeighingId.</summary>
     public Guid WeighingId { get; set; }
+    /// <summary>CompanyId.</summary>
+    public Guid? CompanyId { get; set; }
+    /// <summary>DeliveryLocationId.</summary>
+    public Guid? DeliveryLocationId { get; set; }
     /// <summary>TenantId.</summary>
     public Guid TenantId { get; set; }
     /// <summary>Weighing (servis içi ilişki).</summary>
     public Weighing? Weighing { get; set; }
+    /// <summary>Company (servis içi ilişki).</summary>
+    public Company? Company { get; set; }
+    /// <summary>DeliveryLocation (servis içi ilişki).</summary>
+    public DeliveryLocation? DeliveryLocation { get; set; }
 }

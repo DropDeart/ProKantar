@@ -17,6 +17,8 @@ public sealed class CreateWaybillCommand : ICommand<Guid>
     public WaybillWaybillType WaybillType { get; set; }
     /// <summary>IssuedAt.</summary>
     public DateTimeOffset IssuedAt { get; set; }
+    /// <summary>QuantityKg.</summary>
+    public decimal? QuantityKg { get; set; }
     /// <summary>DeliveryAddress.</summary>
     public string? DeliveryAddress { get; set; }
     /// <summary>EDespatchUuid.</summary>
@@ -34,6 +36,10 @@ public sealed class CreateWaybillCommand : ICommand<Guid>
     public string? ErpError { get; set; }
     /// <summary>WeighingId.</summary>
     public Guid WeighingId { get; set; }
+    /// <summary>CompanyId.</summary>
+    public Guid? CompanyId { get; set; }
+    /// <summary>DeliveryLocationId.</summary>
+    public Guid? DeliveryLocationId { get; set; }
 }
 
 internal sealed class CreateWaybillHandler : ICommandHandler<CreateWaybillCommand, Guid>
@@ -57,6 +63,7 @@ internal sealed class CreateWaybillHandler : ICommandHandler<CreateWaybillComman
             WaybillNo = request.WaybillNo,
             WaybillType = request.WaybillType,
             IssuedAt = request.IssuedAt,
+            QuantityKg = request.QuantityKg,
             DeliveryAddress = request.DeliveryAddress,
             EDespatchUuid = request.EDespatchUuid,
             EDespatchStatus = request.EDespatchStatus,
@@ -65,6 +72,8 @@ internal sealed class CreateWaybillHandler : ICommandHandler<CreateWaybillComman
             ErpSyncedAt = request.ErpSyncedAt,
             ErpError = request.ErpError,
             WeighingId = request.WeighingId,
+            CompanyId = request.CompanyId,
+            DeliveryLocationId = request.DeliveryLocationId,
         };
         await _repository.AddAsync(entity, cancellationToken);
         await _eventBus.PublishAsync(new WaybillCreatedEvent { Data = WaybillDto.From(entity) }, cancellationToken);
@@ -85,6 +94,8 @@ public sealed class UpdateWaybillCommand : ICommand
     public WaybillWaybillType WaybillType { get; set; }
     /// <summary>IssuedAt.</summary>
     public DateTimeOffset IssuedAt { get; set; }
+    /// <summary>QuantityKg.</summary>
+    public decimal? QuantityKg { get; set; }
     /// <summary>DeliveryAddress.</summary>
     public string? DeliveryAddress { get; set; }
     /// <summary>EDespatchUuid.</summary>
@@ -102,6 +113,10 @@ public sealed class UpdateWaybillCommand : ICommand
     public string? ErpError { get; set; }
     /// <summary>WeighingId.</summary>
     public Guid WeighingId { get; set; }
+    /// <summary>CompanyId.</summary>
+    public Guid? CompanyId { get; set; }
+    /// <summary>DeliveryLocationId.</summary>
+    public Guid? DeliveryLocationId { get; set; }
 }
 
 internal sealed class UpdateWaybillHandler : ICommandHandler<UpdateWaybillCommand>
@@ -122,6 +137,7 @@ internal sealed class UpdateWaybillHandler : ICommandHandler<UpdateWaybillComman
         entity.WaybillNo = request.WaybillNo;
         entity.WaybillType = request.WaybillType;
         entity.IssuedAt = request.IssuedAt;
+        entity.QuantityKg = request.QuantityKg;
         entity.DeliveryAddress = request.DeliveryAddress;
         entity.EDespatchUuid = request.EDespatchUuid;
         entity.EDespatchStatus = request.EDespatchStatus;
@@ -130,6 +146,8 @@ internal sealed class UpdateWaybillHandler : ICommandHandler<UpdateWaybillComman
         entity.ErpSyncedAt = request.ErpSyncedAt;
         entity.ErpError = request.ErpError;
         entity.WeighingId = request.WeighingId;
+        entity.CompanyId = request.CompanyId;
+        entity.DeliveryLocationId = request.DeliveryLocationId;
         await _repository.UpdateAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }

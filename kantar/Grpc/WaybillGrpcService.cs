@@ -28,6 +28,7 @@ public sealed class WaybillGrpcService(ISender sender) : WaybillService.WaybillS
             WaybillNo = value.WaybillNo,
             WaybillType = value.WaybillType.ToString(),
             IssuedAt = value.IssuedAt.ToString("o", CultureInfo.InvariantCulture),
+            QuantityKg = value.QuantityKg?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
             DeliveryAddress = value.DeliveryAddress ?? string.Empty,
             EDespatchUuid = value.EDespatchUuid?.ToString() ?? string.Empty,
             EDespatchStatus = value.EDespatchStatus?.ToString() ?? string.Empty,

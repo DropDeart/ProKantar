@@ -20,6 +20,12 @@ public sealed class CreateStationCommand : ICommand<Guid>
     /// <summary>Phone.</summary>
     [MaxLength(20)]
     public string? Phone { get; set; }
+    /// <summary>Latitude.</summary>
+    public decimal? Latitude { get; set; }
+    /// <summary>Longitude.</summary>
+    public decimal? Longitude { get; set; }
+    /// <summary>RadiusM.</summary>
+    public int RadiusM { get; set; } = 300;
     /// <summary>IsActive.</summary>
     public bool IsActive { get; set; } = true;
 }
@@ -43,6 +49,9 @@ internal sealed class CreateStationHandler : ICommandHandler<CreateStationComman
             Code = request.Code,
             Address = request.Address,
             Phone = request.Phone,
+            Latitude = request.Latitude,
+            Longitude = request.Longitude,
+            RadiusM = request.RadiusM,
             IsActive = request.IsActive,
         };
         await _repository.AddAsync(entity, cancellationToken);
@@ -67,6 +76,12 @@ public sealed class UpdateStationCommand : ICommand
     /// <summary>Phone.</summary>
     [MaxLength(20)]
     public string? Phone { get; set; }
+    /// <summary>Latitude.</summary>
+    public decimal? Latitude { get; set; }
+    /// <summary>Longitude.</summary>
+    public decimal? Longitude { get; set; }
+    /// <summary>RadiusM.</summary>
+    public int RadiusM { get; set; } = 300;
     /// <summary>IsActive.</summary>
     public bool IsActive { get; set; } = true;
 }
@@ -90,6 +105,9 @@ internal sealed class UpdateStationHandler : ICommandHandler<UpdateStationComman
         entity.Code = request.Code;
         entity.Address = request.Address;
         entity.Phone = request.Phone;
+        entity.Latitude = request.Latitude;
+        entity.Longitude = request.Longitude;
+        entity.RadiusM = request.RadiusM;
         entity.IsActive = request.IsActive;
         await _repository.UpdateAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

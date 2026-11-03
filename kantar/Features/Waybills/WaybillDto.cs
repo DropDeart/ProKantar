@@ -13,6 +13,8 @@ public sealed class WaybillDto
     public WaybillWaybillType WaybillType { get; set; }
     /// <summary>IssuedAt.</summary>
     public DateTimeOffset IssuedAt { get; set; }
+    /// <summary>QuantityKg.</summary>
+    public decimal? QuantityKg { get; set; }
     /// <summary>DeliveryAddress.</summary>
     public string? DeliveryAddress { get; set; }
     /// <summary>EDespatchUuid.</summary>
@@ -29,6 +31,10 @@ public sealed class WaybillDto
     public string? ErpError { get; set; }
     /// <summary>WeighingId.</summary>
     public Guid WeighingId { get; set; }
+    /// <summary>CompanyId.</summary>
+    public Guid? CompanyId { get; set; }
+    /// <summary>DeliveryLocationId.</summary>
+    public Guid? DeliveryLocationId { get; set; }
 
     /// <summary>Bir Waybill entity'sinden DTO üretir.</summary>
     public static WaybillDto From(Waybill entity)
@@ -40,6 +46,7 @@ public sealed class WaybillDto
             WaybillNo = entity.WaybillNo,
             WaybillType = entity.WaybillType,
             IssuedAt = entity.IssuedAt,
+            QuantityKg = entity.QuantityKg,
             DeliveryAddress = entity.DeliveryAddress,
             EDespatchUuid = entity.EDespatchUuid,
             EDespatchStatus = entity.EDespatchStatus,
@@ -48,6 +55,8 @@ public sealed class WaybillDto
             ErpSyncedAt = entity.ErpSyncedAt,
             ErpError = entity.ErpError,
             WeighingId = entity.WeighingId,
+            CompanyId = entity.CompanyId,
+            DeliveryLocationId = entity.DeliveryLocationId,
         };
     }
 }

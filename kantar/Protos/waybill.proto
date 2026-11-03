@@ -20,11 +20,12 @@ message WaybillMessage {
   string waybill_no = 2;
   string waybill_type = 3;
   string issued_at = 4;
-  string delivery_address = 5;
-  string e_despatch_uuid = 6;
-  string e_despatch_status = 7;
-  string erp_sync_status = 8;
-  string erp_doc_no = 9;
-  string erp_synced_at = 10;
-  string erp_error = 11;
+  string quantity_kg = 5;
+  string delivery_address = 6;
+  string e_despatch_uuid = 7;
+  string e_despatch_status = 8;
+  string erp_sync_status = 9;
+  string erp_doc_no = 10;
+  string erp_synced_at = 11;
+  string erp_error = 12;
 }

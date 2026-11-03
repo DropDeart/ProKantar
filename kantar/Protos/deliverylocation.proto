@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+option csharp_namespace = "Kantar.Grpc";
+
+package kantar;
+
+// BaseForge.CodeGen tarafından üretildi — DeliveryLocation entity'sine diğer servislerin
+// salt-okunur gRPC erişimi. Servis adı (DeliveryLocationService), C# implementasyon sınıfıyla
+// (DeliveryLocationGrpcService) çakışmasın diye ayrı tutulur.
+service DeliveryLocationService {
+  rpc GetById (DeliveryLocationByIdRequest) returns (DeliveryLocationMessage);
+}
+
+message DeliveryLocationByIdRequest {
+  string id = 1;
+}
+
+message DeliveryLocationMessage {
+  string id = 1;
+  string name = 2;
+  string address = 3;
+  string latitude = 4;
+  string longitude = 5;
+  int32 radius_m = 6;
+  string contact_name = 7;
+  string contact_phone = 8;
+  bool is_active = 9;
+}

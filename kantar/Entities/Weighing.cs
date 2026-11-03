@@ -65,6 +65,8 @@ public sealed class Weighing : BaseEntity, ITenantEntity
     public Guid? CompanyId { get; set; }
     /// <summary>MaterialId.</summary>
     public Guid MaterialId { get; set; }
+    /// <summary>ShipmentId.</summary>
+    public Guid? ShipmentId { get; set; }
     /// <summary>VehicleId.</summary>
     public Guid VehicleId { get; set; }
     /// <summary>TenantId.</summary>
@@ -77,4 +79,6 @@ public sealed class Weighing : BaseEntity, ITenantEntity
     public Company? Company { get; set; }
     /// <summary>Material (servis içi ilişki).</summary>
     public Material? Material { get; set; }
+    /// <summary>Shipment (servis içi ilişki).</summary>
+    public Shipment? Shipment { get; set; }
 }

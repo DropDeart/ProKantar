@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+option csharp_namespace = "Kantar.Grpc";
+
+package kantar;
+
+// BaseForge.CodeGen tarafından üretildi — ShipmentStop entity'sine diğer servislerin
+// salt-okunur gRPC erişimi. Servis adı (ShipmentStopService), C# implementasyon sınıfıyla
+// (ShipmentStopGrpcService) çakışmasın diye ayrı tutulur.
+service ShipmentStopService {
+  rpc GetById (ShipmentStopByIdRequest) returns (ShipmentStopMessage);
+}
+
+message ShipmentStopByIdRequest {
+  string id = 1;
+}
+
+message ShipmentStopMessage {
+  string id = 1;
+  int32 sequence = 2;
+  string stop_type = 3;
+  string name = 4;
+  string latitude = 5;
+  string longitude = 6;
+  int32 radius_m = 7;
+  string planned_at = 8;
+  string note = 9;
+}

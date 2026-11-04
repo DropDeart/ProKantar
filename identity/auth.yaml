@@ -8,6 +8,7 @@ clients:
   public: true
   grants:
   - password
+  - otp
   - refresh_token
   scopes:
   - api
@@ -23,9 +24,29 @@ roles:
 - Operator
 - Driver
 registration:
-  enabled: false
+  enabled: true
   defaultRole: User
+  selfAssignableRoles:
+  - Driver
 providers: {}
+multiTenancy:
+  enabled: true
+  adminRole: TenantAdmin
+  memberRoles:
+  - Operator
+  requireApproval: true
+  approverRoles:
+  - SuperAdmin
+otp:
+  enabled: true
+  codeLength: 6
+  lifetimeSeconds: 180
+  maxAttempts: 5
+  resendCooldownSeconds: 60
+  maxPerHour: 5
+  defaultCountryCode: +90
+  smsProvider: Log
+  emailProvider: Log
 dockerPorts:
   rest: 8081
   grpc: 8082

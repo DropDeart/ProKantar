@@ -34,6 +34,65 @@ public sealed class AuthOptions
 
     /// <summary>Dış kimlik sağlayıcıları (Google/GitHub/Microsoft/Facebook/Apple).</summary>
     public ProvidersOptions Providers { get; set; } = new();
+
+    /// <summary>Kiracı (şirket) yönetimi (varsayılan: kapalı).</summary>
+    public MultiTenancyOptions MultiTenancy { get; set; } = new();
+
+    /// <summary>Tek kullanımlık kod: SMS ile giriş, telefon/e-posta doğrulama (varsayılan: kapalı).</summary>
+    public OtpOptions Otp { get; set; } = new();
+}
+
+/// <summary>Tek kullanımlık kod (OTP) kuralları ve gönderici sağlayıcıları.</summary>
+public sealed class OtpOptions
+{
+    /// <summary>Açık mı? Kapalıyken OTP uçları 404 döner, otp grant'ı reddedilir.</summary>
+    public bool Enabled { get; set; }
+
+    /// <summary>Kod uzunluğu (rakam).</summary>
+    public int CodeLength { get; set; } = 6;
+
+    /// <summary>Kodun geçerlilik süresi (sn).</summary>
+    public int LifetimeSeconds { get; set; } = 180;
+
+    /// <summary>Bir koda en fazla hatalı deneme.</summary>
+    public int MaxAttempts { get; set; } = 5;
+
+    /// <summary>Aynı hedefe yeniden gönderim için bekleme (sn).</summary>
+    public int ResendCooldownSeconds { get; set; } = 60;
+
+    /// <summary>Aynı hedefe saatte en fazla gönderim.</summary>
+    public int MaxPerHour { get; set; } = 5;
+
+    /// <summary>Ülke kodsuz yazılan telefonlar için (örn. 0555… → +90555…).</summary>
+    public string DefaultCountryCode { get; set; } = "+90";
+
+    /// <summary>SMS sağlayıcısı. Şimdilik yalnız <c>Log</c> (kod log'a yazılır, yalnız Development).</summary>
+    public string SmsProvider { get; set; } = "Log";
+
+    /// <summary>E-posta sağlayıcısı. Şimdilik yalnız <c>Log</c>.</summary>
+    public string EmailProvider { get; set; } = "Log";
+}
+
+/// <summary>Kiracı (şirket) yönetimi: şirketler, üyelikler, token'da tenant_id.</summary>
+public sealed class MultiTenancyOptions
+{
+    /// <summary>Açık mı? Kapalıyken kiracı uçları 404 döner, token'a tenant_id yazılmaz.</summary>
+    public bool Enabled { get; set; }
+
+    /// <summary>Şirketi açanın ve üye yönetenin rolü.</summary>
+    public string AdminRole { get; set; } = "TenantAdmin";
+
+    /// <summary>Şirket içinde verilebilen roller; yalnızca üyelikten gelir, global atanmaz.</summary>
+    public List<string> MemberRoles { get; set; } = [];
+
+    /// <summary>Self-servis açılan şirket onaylanana kadar beklemede kalır.</summary>
+    public bool RequireApproval { get; set; } = true;
+
+    /// <summary>Şirketleri onaylayan/askıya alan global roller.</summary>
+    public List<string> ApproverRoles { get; set; } = ["SuperAdmin"];
+
+    /// <summary>Admin rolü dahil tüm şirket içi roller.</summary>
+    public IReadOnlyList<string> AllMemberRoles => [.. MemberRoles.Append(AdminRole).Distinct(StringComparer.Ordinal)];
 }
 
 /// <summary>Kendi kendine kayıt ayarları (bkz. BaseForge docs/ARCH.md §6.1).</summary>
@@ -47,6 +106,9 @@ public sealed class RegistrationOptions
 
     /// <summary>Kayıt olan (veya dış sağlayıcıyla ilk kez gelen) kullanıcıya verilecek rol.</summary>
     public string DefaultRole { get; set; } = "User";
+
+    /// <summary>Kullanıcının kendine ekleyebileceği global roller (örn. şoför uygulaması için <c>Driver</c>).</summary>
+    public List<string> SelfAssignableRoles { get; set; } = [];
 }
 
 /// <summary>Bir API scope'u ve eşlendiği kaynak (audience).</summary>

@@ -1,5 +1,7 @@
 using Identity.Entities;
+using Identity.Otp;
 using Identity.Profile;
+using Identity.Tenancy;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -21,5 +23,7 @@ public sealed class IdentityServiceDbContext : IdentityDbContext<ApplicationUser
         base.OnModelCreating(builder);
         builder.UseOpenIddict();
         UserProfile.Configure(builder);
+        TenancyModel.Configure(builder);
+        OtpModel.Configure(builder);
     }
 }

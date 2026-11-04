@@ -14,6 +14,9 @@ public interface ITenantAdminGuard
     /// <summary>Şirket aktif ve işlemi yapan şirket yöneticisi (ya da platform yöneticisi) olmalı.</summary>
     Task EnsureCanManageAsync(Guid tenantId, TenantActor actor, CancellationToken cancellationToken);
 
+    /// <summary>Başvuru/firma bilgisi ve belgeler: şirket yöneticisi (onay beklerken de) ya da platform yöneticisi; askıda değil.</summary>
+    Task EnsureCanEditAsync(Guid tenantId, TenantActor actor, CancellationToken cancellationToken, bool allowSuspended = false);
+
     /// <summary>Roller şirket içi roller olmalı ve en az bir rol verilmeli.</summary>
     IReadOnlyList<string> ValidateRoles(IReadOnlyList<string>? roles);
 
@@ -28,7 +31,23 @@ internal sealed class TenantAdminGuard(IdentityServiceDbContext db, AuthOptions 
 
     public async Task EnsureCanManageAsync(Guid tenantId, TenantActor actor, CancellationToken cancellationToken)
     {
-        // Şirket durumu ve yöneticilik tek sorguda.
+        if (await EnsureAdminAsync(tenantId, actor, cancellationToken) != TenantStatus.Active)
+        {
+            throw IdentityException.Conflict("Şirket aktif değil (onay bekliyor ya da askıda).");
+        }
+    }
+
+    public async Task EnsureCanEditAsync(Guid tenantId, TenantActor actor, CancellationToken cancellationToken, bool allowSuspended = false)
+    {
+        if (await EnsureAdminAsync(tenantId, actor, cancellationToken) == TenantStatus.Suspended && !allowSuspended)
+        {
+            throw IdentityException.Conflict("Şirket askıda.");
+        }
+    }
+
+    // Şirket durumu ve yöneticilik tek sorguda; yönetici değilse 403.
+    private async Task<TenantStatus> EnsureAdminAsync(Guid tenantId, TenantActor actor, CancellationToken cancellationToken)
+    {
         var adminRole = _tenancy.AdminRole;
         var check = await db.Set<Tenant>().AsNoTracking()
             .Where(t => t.Id == tenantId)
@@ -41,15 +60,7 @@ internal sealed class TenantAdminGuard(IdentityServiceDbContext db, AuthOptions 
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw IdentityException.NotFound("Şirket bulunamadı.");
 
-        if (!actor.IsPlatformAdmin && !check.IsAdmin)
-        {
-            throw IdentityException.Forbidden("Bu şirketin yöneticisi değilsiniz.");
-        }
-
-        if (check.Status != TenantStatus.Active)
-        {
-            throw IdentityException.Conflict("Şirket aktif değil (onay bekliyor ya da askıda).");
-        }
+        return actor.IsPlatformAdmin || check.IsAdmin ? check.Status : throw IdentityException.Forbidden("Bu şirketin yöneticisi değilsiniz.");
     }
 
     public IReadOnlyList<string> ValidateRoles(IReadOnlyList<string>? roles)

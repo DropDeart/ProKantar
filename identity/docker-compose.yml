@@ -32,6 +32,7 @@ services:
       - "8082:8081"   # gRPC (h2c) — merkez User entity'sine erişim
     volumes:
       - identity-avatars:/app/wwwroot/uploads   # profil fotoğrafları — container recreate'te kaybolmasın
+      - identity-documents:/app/data/tenant-documents   # şirket belgeleri (gizli, wwwroot dışında)
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
       interval: 10s
@@ -45,3 +46,4 @@ services:
 volumes:
   identity-pgdata:
   identity-avatars:
+  identity-documents:

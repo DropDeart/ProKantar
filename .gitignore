@@ -19,3 +19,6 @@ obj/
 # Kullanıcı yüklemeleri (klasör .gitkeep ile kalır)
 **/wwwroot/uploads/*
 !**/wwwroot/uploads/.gitkeep
+
+# Identity şirket belgeleri (yerel çalıştırma)
+identity/data/

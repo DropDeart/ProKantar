@@ -1,10 +1,35 @@
 namespace Identity.Tenancy;
 
-/// <summary>Şirket özeti.</summary>
-public sealed record TenantDto(Guid Id, string Name, string Slug, string? TaxNo, TenantStatus Status, DateTimeOffset CreatedAt)
+/// <summary>Şirket özeti ve firma bilgileri.</summary>
+public sealed record TenantDto(
+    Guid Id,
+    string Name,
+    string Slug,
+    string? TaxNo,
+    TenantStatus Status,
+    DateTimeOffset CreatedAt,
+    string? TaxOffice,
+    string? MersisNo,
+    string? TradeRegistryNo,
+    string? Phone,
+    string? Email,
+    string? KepAddress,
+    string? City,
+    string? District,
+    string? Address,
+    string? ReviewNote)
 {
     /// <summary>Entity'den.</summary>
-    public static TenantDto From(Tenant t) => new(t.Id, t.Name, t.Slug, t.TaxNo, t.Status, t.CreatedAt);
+    public static TenantDto From(Tenant t) => new(
+        t.Id, t.Name, t.Slug, t.TaxNo, t.Status, t.CreatedAt, t.TaxOffice, t.MersisNo, t.TradeRegistryNo,
+        t.Phone, t.Email, t.KepAddress, t.City, t.District, t.Address, t.ReviewNote);
+}
+
+/// <summary>Belge kaydı (dosya içeriği ayrı uçtan).</summary>
+public sealed record TenantDocumentDto(Guid Id, TenantDocumentType Type, string FileName, string ContentType, long Size, DateTimeOffset UploadedAt)
+{
+    /// <summary>Entity'den.</summary>
+    public static TenantDocumentDto From(TenantDocument d) => new(d.Id, d.Type, d.FileName, d.ContentType, d.Size, d.UploadedAt);
 }
 
 /// <summary>Kullanıcının bir şirketle ilişkisi (üyelik, davet ya da istek).</summary>
@@ -24,11 +49,33 @@ public sealed record MemberDto(
 /// <summary>Katılım kodu araması sonucu (yalnız ad).</summary>
 public sealed record TenantLookupDto(string Name, string Slug);
 
-/// <summary>Şirket açma isteği.</summary>
-public sealed record CreateTenantRequest(string Name, string? TaxNo);
+/// <summary>Şirket başvurusu: ticaret unvanı ve firma bilgileri.</summary>
+public sealed record CreateTenantRequest(
+    string Name,
+    string? TaxNo,
+    string? TaxOffice = null,
+    string? MersisNo = null,
+    string? TradeRegistryNo = null,
+    string? Phone = null,
+    string? Email = null,
+    string? KepAddress = null,
+    string? City = null,
+    string? District = null,
+    string? Address = null) : ITenantProfileInput;
 
 /// <summary>Şirket bilgisi güncelleme (kod/slug değişmez; katılım bağlantıları bozulmasın).</summary>
-public sealed record UpdateTenantRequest(string Name, string? TaxNo);
+public sealed record UpdateTenantRequest(
+    string Name,
+    string? TaxNo,
+    string? TaxOffice = null,
+    string? MersisNo = null,
+    string? TradeRegistryNo = null,
+    string? Phone = null,
+    string? Email = null,
+    string? KepAddress = null,
+    string? City = null,
+    string? District = null,
+    string? Address = null) : ITenantProfileInput;
 
 /// <summary>Katılma isteği (şirket kodu ile).</summary>
 public sealed record JoinTenantRequest(string Slug);

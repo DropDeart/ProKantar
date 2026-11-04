@@ -49,7 +49,7 @@ internal sealed class MembershipService(IdentityServiceDbContext db, ITenantAdmi
             .OrderBy(m => m.Tenant!.Name)
             .Select(m => new MyMembershipDto(
                 m.Id,
-                new TenantDto(m.Tenant!.Id, m.Tenant.Name, m.Tenant.Slug, m.Tenant.TaxNo, m.Tenant.Status, m.Tenant.CreatedAt),
+                TenantDto.From(m.Tenant!),
                 m.Status, m.Roles, m.IsDefault))
             .ToListAsync(cancellationToken);
     }

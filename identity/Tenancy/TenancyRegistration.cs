@@ -20,6 +20,7 @@ public static class TenancyRegistration
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<ITenantAdminGuard, TenantAdminGuard>();
         services.AddScoped<ITenantOnboardingService, TenantOnboardingService>();
+        services.AddScoped<ITenantDocumentService, TenantDocumentService>();
         services.AddScoped<IMembershipService, MembershipService>();
         services.AddScoped<IMemberAdministrationService, MemberAdministrationService>();
         services.AddScoped<ITenantTokenResolver, TenantTokenResolver>();

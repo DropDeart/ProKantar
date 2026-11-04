@@ -17,9 +17,28 @@ public static class TenancyModel
             tenant.Property(t => t.Name).HasMaxLength(200);
             tenant.Property(t => t.Slug).HasMaxLength(60);
             tenant.Property(t => t.TaxNo).HasMaxLength(20);
+            tenant.Property(t => t.TaxOffice).HasMaxLength(100);
+            tenant.Property(t => t.MersisNo).HasMaxLength(16);
+            tenant.Property(t => t.TradeRegistryNo).HasMaxLength(30);
+            tenant.Property(t => t.Phone).HasMaxLength(20);
+            tenant.Property(t => t.Email).HasMaxLength(256);
+            tenant.Property(t => t.KepAddress).HasMaxLength(256);
+            tenant.Property(t => t.City).HasMaxLength(60);
+            tenant.Property(t => t.District).HasMaxLength(60);
+            tenant.Property(t => t.Address).HasMaxLength(500);
             tenant.Property(t => t.Status).HasConversion<string>().HasMaxLength(20);
             tenant.Property(t => t.ReviewNote).HasMaxLength(500);
             tenant.HasIndex(t => t.Slug).IsUnique();
+        });
+
+        builder.Entity<TenantDocument>(document =>
+        {
+            document.ToTable("TenantDocuments");
+            document.Property(d => d.Type).HasConversion<string>().HasMaxLength(30);
+            document.Property(d => d.FileName).HasMaxLength(120);
+            document.Property(d => d.ContentType).HasMaxLength(50);
+            document.HasOne<Tenant>().WithMany().HasForeignKey(d => d.TenantId).OnDelete(DeleteBehavior.Cascade);
+            document.HasIndex(d => d.TenantId);
         });
 
         builder.Entity<TenantMembership>(membership =>
@@ -60,6 +79,28 @@ public static class TenancyModel
                 "ReviewNote" character varying(500) NULL
             );
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_Tenants_Slug" ON "Tenants" ("Slug");
+            ALTER TABLE "Tenants"
+                ADD COLUMN IF NOT EXISTS "TaxOffice" character varying(100) NULL,
+                ADD COLUMN IF NOT EXISTS "MersisNo" character varying(16) NULL,
+                ADD COLUMN IF NOT EXISTS "TradeRegistryNo" character varying(30) NULL,
+                ADD COLUMN IF NOT EXISTS "Phone" character varying(20) NULL,
+                ADD COLUMN IF NOT EXISTS "Email" character varying(256) NULL,
+                ADD COLUMN IF NOT EXISTS "KepAddress" character varying(256) NULL,
+                ADD COLUMN IF NOT EXISTS "City" character varying(60) NULL,
+                ADD COLUMN IF NOT EXISTS "District" character varying(60) NULL,
+                ADD COLUMN IF NOT EXISTS "Address" character varying(500) NULL;
+
+            CREATE TABLE IF NOT EXISTS "TenantDocuments" (
+                "Id" uuid NOT NULL CONSTRAINT "PK_TenantDocuments" PRIMARY KEY,
+                "TenantId" uuid NOT NULL CONSTRAINT "FK_TenantDocuments_Tenants_TenantId" REFERENCES "Tenants" ("Id") ON DELETE CASCADE,
+                "Type" character varying(30) NOT NULL,
+                "FileName" character varying(120) NOT NULL,
+                "ContentType" character varying(50) NOT NULL,
+                "Size" bigint NOT NULL,
+                "UploadedByUserId" uuid NOT NULL,
+                "UploadedAt" timestamp with time zone NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS "IX_TenantDocuments_TenantId" ON "TenantDocuments" ("TenantId");
 
             CREATE TABLE IF NOT EXISTS "TenantMemberships" (
                 "Id" uuid NOT NULL CONSTRAINT "PK_TenantMemberships" PRIMARY KEY,

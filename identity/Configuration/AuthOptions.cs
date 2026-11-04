@@ -154,6 +154,9 @@ public sealed class MultiTenancyOptions
     /// <summary>Şirketleri onaylayan/askıya alan global roller.</summary>
     public List<string> ApproverRoles { get; set; } = ["SuperAdmin"];
 
+    /// <summary>Şirket belgelerinin gizli klasörü (wwwroot dışında; içerik köküne göreli olabilir).</summary>
+    public string DocumentsPath { get; set; } = "data/tenant-documents";
+
     /// <summary>Admin rolü dahil tüm şirket içi roller.</summary>
     public IReadOnlyList<string> AllMemberRoles => [.. MemberRoles.Append(AdminRole).Distinct(StringComparer.Ordinal)];
 }

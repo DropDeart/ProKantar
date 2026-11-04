@@ -17,6 +17,7 @@ public sealed class TenantsApiController(
     UserManager<ApplicationUser> userManager,
     IMembershipService memberships,
     ITenantOnboardingService onboarding,
+    ITenantDocumentService documents,
     IAuthorizationService authorization) : ControllerBase
 {
     /// <summary>Üyelikler, davetler ve bekleyen istekler.</summary>
@@ -29,10 +30,47 @@ public sealed class TenantsApiController(
     public async Task<MyMembershipDto> Create(CreateTenantRequest request, CancellationToken cancellationToken)
         => await onboarding.CreateAsync(userManager.GetRequiredUserId(User), request, cancellationToken);
 
-    /// <summary>Şirketin adını ve vergi numarasını günceller (şirket yöneticisi).</summary>
+    /// <summary>Şirket ve firma bilgileri (şirket yöneticisi ya da platform yöneticisi).</summary>
+    [HttpGet("{tenantId:guid}")]
+    public async Task<TenantDto> Get(Guid tenantId, CancellationToken cancellationToken)
+        => await onboarding.GetAsync(tenantId, await ActorAsync(), cancellationToken);
+
+    /// <summary>Firma bilgilerini günceller (onay beklerken de).</summary>
     [HttpPut("{tenantId:guid}")]
     public async Task<TenantDto> Update(Guid tenantId, UpdateTenantRequest request, CancellationToken cancellationToken)
-        => await onboarding.UpdateAsync(tenantId, await authorization.GetTenantActorAsync(userManager, User), request, cancellationToken);
+        => await onboarding.UpdateAsync(tenantId, await ActorAsync(), request, cancellationToken);
+
+    /// <summary>Reddedilen başvuruyu yeniden incelemeye gönderir.</summary>
+    [HttpPost("{tenantId:guid}/resubmit")]
+    public async Task<TenantDto> Resubmit(Guid tenantId, CancellationToken cancellationToken)
+        => await onboarding.ResubmitAsync(tenantId, await ActorAsync(), cancellationToken);
+
+    /// <summary>Başvuru belgeleri.</summary>
+    [HttpGet("{tenantId:guid}/documents")]
+    public async Task<IReadOnlyList<TenantDocumentDto>> Documents(Guid tenantId, CancellationToken cancellationToken)
+        => await documents.ListAsync(tenantId, await ActorAsync(), cancellationToken);
+
+    /// <summary>Belge yükler (PDF/JPG/PNG, en fazla 10 MB; aynı türdeki eskisinin yerine geçer).</summary>
+    [HttpPost("{tenantId:guid}/documents")]
+    [RequestSizeLimit(TenantDocumentService.MaxBytes + 64 * 1024)]
+    public async Task<TenantDocumentDto> Upload(Guid tenantId, [FromForm] TenantDocumentType type, IFormFile file, CancellationToken cancellationToken)
+        => await documents.UploadAsync(tenantId, await ActorAsync(), type, file, cancellationToken);
+
+    /// <summary>Belge dosyası.</summary>
+    [HttpGet("{tenantId:guid}/documents/{documentId:guid}/file")]
+    public async Task<IActionResult> DocumentFile(Guid tenantId, Guid documentId, CancellationToken cancellationToken)
+    {
+        var file = await documents.OpenAsync(tenantId, documentId, await ActorAsync(), cancellationToken);
+        return File(file.Content, file.ContentType, file.FileName);
+    }
+
+    /// <summary>Belgeyi siler (onay öncesi).</summary>
+    [HttpDelete("{tenantId:guid}/documents/{documentId:guid}")]
+    public async Task<IActionResult> DeleteDocument(Guid tenantId, Guid documentId, CancellationToken cancellationToken)
+    {
+        await documents.DeleteAsync(tenantId, documentId, await ActorAsync(), cancellationToken);
+        return NoContent();
+    }
 
     /// <summary>Şirket kodundan ad (katılmadan önce).</summary>
     [HttpGet("lookup/{slug}")]
@@ -67,6 +105,8 @@ public sealed class TenantsApiController(
         await memberships.SetDefaultAsync(userManager.GetRequiredUserId(User), membershipId, cancellationToken);
         return NoContent();
     }
+
+    private Task<TenantActor> ActorAsync() => authorization.GetTenantActorAsync(userManager, User);
 
     /// <summary>Şirketten ayrılır ya da isteği geri çeker.</summary>
     [HttpDelete("memberships/{membershipId:guid}")]

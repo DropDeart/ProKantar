@@ -1,0 +1,43 @@
+# tracking — servis + kendi PostGIS veritabanı.
+# Ayağa kaldır:  docker compose up --build -d     (önce: .env.example → .env, şifreleri doldur)
+# API arayüzü:   http://localhost:8087/scalar/v1
+# RabbitMQ: kökteki paylaşılan broker (kantar olaylarını dinler).
+services:
+  postgres:
+    image: postgis/postgis:17-3.5-alpine
+    environment:
+      POSTGRES_USER: baseforge
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD .env dosyasinda tanimli olmali}
+      POSTGRES_DB: prokantar_tracking_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U baseforge -d prokantar_tracking_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "127.0.0.1:5435:5432"   # yalnızca bu makineden (yerel 'dotnet run' için)
+    volumes:
+      - tracking-pgdata:/var/lib/postgresql/data
+
+  tracking:
+    build: .
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=prokantar_tracking_db;Username=baseforge;Password=${POSTGRES_PASSWORD}"
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD .env dosyasinda tanimli olmali}
+      Auth__ServiceClient__ClientSecret: ${Auth__ServiceClient__ClientSecret:-}
+    ports:
+      - "8087:8080"   # REST
+      - "8088:8081"   # gRPC (h2c)
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  tracking-pgdata:

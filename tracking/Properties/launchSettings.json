@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "Tracking": {
+      "commandName": "Project",
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:8087",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Kestrel__Endpoints__Http__Url": "http://localhost:8087",
+        "Kestrel__Endpoints__Grpc__Url": "http://localhost:8088",
+        "Auth__Authority": "http://localhost:8081",
+        "Grpc__Platform": "http://localhost:8086",
+        "RabbitMq__Host": "localhost",
+        "Serilog__LokiUrl": "http://localhost:3100"
+      }
+    }
+  }
+}

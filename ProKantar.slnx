@@ -8,4 +8,10 @@
   <Folder Name="/platform/">
     <Project Path="platform/Platform.csproj" />
   </Folder>
+  <Folder Name="/tracking/">
+    <Project Path="tracking/Tracking.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Tracking.UnitTests/Tracking.UnitTests.csproj" />
+  </Folder>
 </Solution>

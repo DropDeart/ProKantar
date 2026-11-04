@@ -303,42 +303,34 @@ identity = dict(
         ], rel=[R("user", "many-to-one", "User"), R("tenant", "many-to-one", "Tenant")], ext=[]),
     ])
 
-# ---------------- TRACKING (elle, PostGIS - sonra) ----------------
+# ---------------- TRACKING (elle, PostGIS, BaseForge mimarisi) ----------------
 tracking = dict(
-    key="tracking", title="tracking — ELLE, PostGIS (taslak, sonra detaylanacak)",
+    key="tracking", title="tracking — ELLE, PostGIS (8087/8088/5435)",
     color="#e1d5e7", stroke="#9673a6", multi=False, mode="manual",
     entities=[
-        dict(name="Geofence", fields=[
-            F("tenantId", "guid"), F("stationId", "guid", note="kantar/Station (ID)"),
-            F("name", "string"), F("type", "enum", values=["Site", "WeighbridgeArea", "Loading"]),
-            F("boundary", "geometry(Polygon,4326)"),
-        ], rel=[], ext=[]),
-        dict(name="Trip", note="kantar/Shipment'ın canlı karşılığı (Id = ShipmentId)", fields=[
-            F("tenantId", "guid"), F("shipmentId", "guid", note="kantar/Shipment"),
-            F("driverId", "guid"), F("vehicleId", "guid"), F("plate", "string"),
+        dict(name="Trip", note="Id = kantar Shipment Id", fields=[
+            F("tenantId", "guid"), F("shipmentNo", "string"),
             F("direction", "enum", values=["Inbound", "Outbound"]),
             F("status", "enum", values=["Planned", "Active", "Completed", "Cancelled"]),
-            F("startedAt", "datetime", True), F("endedAt", "datetime", True),
-            F("route", "geometry(LineString,4326)", True, note="tamamlanınca ping'lerden"),
+            F("stationId", "guid"), F("vehicleId", "guid"), F("plate", "string"),
+            F("driverId", "guid"), F("driverUserId", "guid", note="token sub; konumu eşler"),
+            F("plannedAt", "datetime"), F("startedAt", "datetime", True), F("endedAt", "datetime", True),
+            F("route", "geometry(LineString,4326)", True, note="kapanınca konumlardan"),
             F("distanceM", "double", True),
         ], rel=[], ext=[]),
-        dict(name="TripStop", fields=[
-            F("tripId", "guid", ref="Trip"), F("shipmentStopId", "guid", note="kantar/ShipmentStop"),
-            F("sequence", "int"), F("stopType", "enum", values=["Pickup", "Weighbridge", "Delivery"]),
+        dict(name="TripStop", note="Id = kantar ShipmentStop Id", fields=[
+            F("tripId", "guid", ref="Trip"), F("sequence", "int"),
+            F("stopType", "enum", values=["Pickup", "Weighbridge", "Delivery"]),
             F("name", "string"), F("location", "geometry(Point,4326)"), F("radiusM", "int"),
             F("waybillId", "guid", True), F("status", "enum", values=["Pending", "Arrived", "Departed", "Skipped"]),
             F("arrivedAt", "datetime", True), F("departedAt", "datetime", True),
-            F("confirmedByDriver", "bool", note="'Teslim ettim'"),
+            F("confirmedAt", "datetime", True, note="şoför 'Teslim ettim' / tartım tamamlandı"),
         ], rel=[], ext=[]),
-        dict(name="LocationPing", note="BaseEntity DEĞİL · bigint id · partition(RecordedAt)", fields=[
-            F("deviceId", "guid"), F("tripId", "guid", True, ref="Trip"),
+        dict(name="LocationPing", note="EF dışı · bigserial · aylık partition(recorded_at) · 6 ay", fields=[
+            F("tripId", "guid", ref="Trip"), F("driverUserId", "guid"),
             F("location", "geometry(Point,4326)"), F("accuracyM", "float", True),
             F("speedMps", "float", True), F("heading", "float", True),
             F("recordedAt", "datetime"), F("receivedAt", "datetime"),
-        ], rel=[], ext=[]),
-        dict(name="GeofenceEvent", fields=[
-            F("tripId", "guid", ref="Trip"), F("geofenceId", "guid", ref="Geofence"),
-            F("eventType", "enum", values=["Enter", "Exit"]), F("occurredAt", "datetime"),
         ], rel=[], ext=[]),
     ])
 
@@ -353,8 +345,6 @@ CROSS = [
     ("tracking", "Trip", "kantar", "Shipment"),
     ("tracking", "TripStop", "kantar", "ShipmentStop"),
     ("tracking", "Trip", "platform", "Driver"),
-    ("tracking", "Geofence", "kantar", "Station"),
-    ("tracking", "LocationPing", "platform", "Device"),
     ("kantar", "Station", "identity", "Tenant"),
 ]
 

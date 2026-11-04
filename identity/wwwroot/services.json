@@ -29,6 +29,17 @@
       "authority": "http://host.docker.internal:8081",
       "audience": "baseforge-api",
       "protected": true
+    },
+    {
+      "name": "tracking",
+      "restPort": 8087,
+      "grpcPort": 8088,
+      "postgresPort": 5435,
+      "entityCount": 2,
+      "isIdentity": false,
+      "authority": "http://host.docker.internal:8081",
+      "audience": "baseforge-api",
+      "protected": true
     }
   ]
 }

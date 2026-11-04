@@ -1,0 +1,23 @@
+# ProKantar — servislerin paylaştığı altyapı.
+# Ayağa kaldır: docker compose up -d rabbitmq      (önce: .env.example → .env)
+# Yönetim paneli: http://localhost:15672  (kullanıcı: baseforge)
+# RABBITMQ_PASSWORD, kantar/.env ve tracking/.env'deki RABBITMQ_PASSWORD ile aynı olmalı.
+services:
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: baseforge
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD .env dosyasinda tanimli olmali}
+    ports:
+      - "5672:5672"               # servisler host.docker.internal:5672 ile bağlanır
+      - "127.0.0.1:15672:15672"   # yönetim paneli yalnızca bu makineden
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  rabbitmq-data:

@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+option csharp_namespace = "Tracking.Grpc";
+
+package tracking;
+
+// Seferin salt-okunur gRPC erişimi (BaseForge GetById kalıbı). Kiracı, çağıranın token'ından gelir.
+service TripService {
+  rpc GetById (TripByIdRequest) returns (TripMessage);
+}
+
+message TripByIdRequest {
+  string id = 1;
+}
+
+message TripMessage {
+  string id = 1;
+  string shipment_no = 2;
+  string direction = 3;
+  string status = 4;
+  string plate = 5;
+  string driver_id = 6;
+  string planned_at = 7;
+  string started_at = 8;
+  string ended_at = 9;
+  double distance_m = 10;
+  repeated TripStopMessage stops = 11;
+}
+
+message TripStopMessage {
+  string id = 1;
+  int32 sequence = 2;
+  string stop_type = 3;
+  string name = 4;
+  string status = 5;
+  string arrived_at = 6;
+  string departed_at = 7;
+  string confirmed_at = 8;
+}

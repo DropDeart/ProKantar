@@ -91,6 +91,9 @@ builder.Services.AddBaseForge(options =>
 
 
 
+// Elle yazılan servis kayıtları: Custom/ altında ProgramHooks.ConfigureServices (bu dosya her üretimde ezilir).
+Platform.ProgramHooks.Services(builder);
+
 var app = builder.Build();
 
 // Reverse proxy (nginx vb.) arkasında çalışırken gerçek şema/host'u (https, gerçek domain)
@@ -147,6 +150,8 @@ if (app.Environment.IsDevelopment())
 app.UseCors("ConfiguredOrigins");
 app.UseStaticFiles(); // wwwroot/uploads — MediaController'ın fiziksel olarak kaydettiği dosyalar için
 app.UseBaseForge();
+// Elle yazılan middleware/endpoint'ler: Custom/ altında ProgramHooks.ConfigureApp.
+Platform.ProgramHooks.App(app);
 app.MapControllers();
 // gRPC uçları kimlik doğrulaması ister: kullanıcı token'ı (çağıran servis iletir) ya da servis token'ı
 // (client_credentials). Bkz. docs/ARCH.md §5.1.1.

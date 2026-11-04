@@ -94,6 +94,8 @@ builder.Services.AddBaseForge(options =>
         mq.Port = int.Parse(builder.Configuration["RabbitMq:Port"] ?? "5672");
         mq.Username = builder.Configuration["RabbitMq:Username"] ?? "guest";
         mq.Password = builder.Configuration["RabbitMq:Password"] ?? "guest";
+        // CRUD dışı olaylara abonelik: Custom/ altında ProgramHooks.ConfigureRabbitMq (bkz. ProgramHooks.cs).
+        Kantar.ProgramHooks.RabbitMq(mq);
     });
 });
 
@@ -105,6 +107,9 @@ builder.Services.AddGrpcClient<Platform.Grpc.VehicleService.VehicleServiceClient
     .AddBaseForgeCallCredentials();
 builder.Services.AddScoped<Kantar.Integration.IVehicleClient, Kantar.Integration.VehicleClient>();
 
+
+// Elle yazılan servis kayıtları: Custom/ altında ProgramHooks.ConfigureServices (bu dosya her üretimde ezilir).
+Kantar.ProgramHooks.Services(builder);
 
 var app = builder.Build();
 
@@ -162,6 +167,8 @@ if (app.Environment.IsDevelopment())
 app.UseCors("ConfiguredOrigins");
 app.UseStaticFiles(); // wwwroot/uploads — MediaController'ın fiziksel olarak kaydettiği dosyalar için
 app.UseBaseForge();
+// Elle yazılan middleware/endpoint'ler: Custom/ altında ProgramHooks.ConfigureApp.
+Kantar.ProgramHooks.App(app);
 app.MapControllers();
 // gRPC uçları kimlik doğrulaması ister: kullanıcı token'ı (çağıran servis iletir) ya da servis token'ı
 // (client_credentials). Bkz. docs/ARCH.md §5.1.1.

@@ -333,6 +333,7 @@ entities:
         target: platform/Vehicle
         store: VehicleId
         via: grpc
+        nullable: false
     access:
       list: [TenantAdmin, Operator]
       getById: [TenantAdmin, Operator]
@@ -453,6 +454,7 @@ entities:
         target: platform/Vehicle
         store: VehicleId
         via: grpc
+        nullable: false
     publishes:
     - created
     - updated
@@ -664,6 +666,7 @@ entities:
         target: platform/Vehicle
         store: VehicleId
         via: grpc
+        nullable: false
     access:
       list: [TenantAdmin, Operator]
       getById: [TenantAdmin, Operator]

@@ -45,8 +45,17 @@ otp:
   resendCooldownSeconds: 60
   maxPerHour: 5
   defaultCountryCode: +90
-  smsProvider: Log
+messaging:
   emailProvider: Log
+  smsProvider: Log
+  smtp:
+    port: 587
+    fromName: ProKantar
+passwordReset:
+  enabled: false
+  tokenLifetimeHours: 2
+  cooldownSeconds: 60
+accessTokenLifetimeMinutes: 60
 dockerPorts:
   rest: 8081
   grpc: 8082

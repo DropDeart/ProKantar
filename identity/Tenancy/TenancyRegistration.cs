@@ -1,4 +1,9 @@
+using System.Security.Claims;
+using Identity.Accounts;
 using Identity.Configuration;
+using Identity.Entities;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Identity.Tenancy;
@@ -25,4 +30,9 @@ public static class TenancyRegistration
             .RequireRole(options.MultiTenancy.ApproverRoles));
         return services;
     }
+
+    /// <summary>İsteği yapan; platform yöneticisi = şirket onaylayan politika (üye olmadan da yönetebilir).</summary>
+    public static async Task<TenantActor> GetTenantActorAsync(
+        this IAuthorizationService authorization, UserManager<ApplicationUser> userManager, ClaimsPrincipal user)
+        => new(userManager.GetRequiredUserId(user), (await authorization.AuthorizeAsync(user, ApproverPolicy)).Succeeded);
 }

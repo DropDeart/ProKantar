@@ -1,3 +1,4 @@
+using Identity.Accounts;
 using Identity.Entities;
 using Identity.Otp;
 using Identity.Profile;
@@ -25,5 +26,6 @@ public sealed class IdentityServiceDbContext : IdentityDbContext<ApplicationUser
         UserProfile.Configure(builder);
         TenancyModel.Configure(builder);
         OtpModel.Configure(builder);
+        AccountModel.Configure(builder);
     }
 }

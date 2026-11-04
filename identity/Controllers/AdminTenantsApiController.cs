@@ -1,6 +1,6 @@
+using Identity.Accounts;
 using Identity.Configuration;
 using Identity.Entities;
-using Identity.ErrorHandling;
 using Identity.Tenancy;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -42,9 +42,8 @@ public sealed class AdminTenantsApiController(UserManager<ApplicationUser> userM
     public Task<TenantDto> Activate(Guid tenantId, [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] ReviewTenantRequest? request, CancellationToken cancellationToken)
         => ReviewAsync(tenantId, TenantStatus.Active, request, cancellationToken);
 
-    private async Task<TenantDto> ReviewAsync(Guid tenantId, TenantStatus target, ReviewTenantRequest? request, CancellationToken cancellationToken)
+    private Task<TenantDto> ReviewAsync(Guid tenantId, TenantStatus target, ReviewTenantRequest? request, CancellationToken cancellationToken)
     {
-        var reviewer = await userManager.GetUserAsync(User) ?? throw IdentityException.Forbidden("Kullanıcı bulunamadı.");
-        return await onboarding.ReviewAsync(tenantId, target, reviewer.Id, request?.Note, cancellationToken);
+        return onboarding.ReviewAsync(tenantId, target, userManager.GetRequiredUserId(User), request?.Note, cancellationToken);
     }
 }

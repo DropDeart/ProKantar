@@ -52,7 +52,8 @@ messaging:
     port: 587
     fromName: ProKantar
 passwordReset:
-  enabled: false
+  enabled: true
+  resetUrl: http://localhost:3000/sifre-sifirla
   tokenLifetimeHours: 2
   cooldownSeconds: 60
 accessTokenLifetimeMinutes: 60

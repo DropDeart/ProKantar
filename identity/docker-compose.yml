@@ -25,6 +25,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       Auth__Issuer: "http://identity:8080/"
+      Cors__AllowedOrigins__0: "http://localhost:3000"   # ProKantarUI (yerel)
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=identity_db;Username=baseforge;Password=${POSTGRES_PASSWORD}"
     ports:
       - "8081:8080"   # REST/OpenIddict (HTTP/1.1)

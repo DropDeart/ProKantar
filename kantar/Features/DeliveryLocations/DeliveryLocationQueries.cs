@@ -40,15 +40,19 @@ internal sealed class ListDeliveryLocationHandler : IQueryHandler<ListDeliveryLo
 {
     private readonly IRepository<DeliveryLocation> _repository;
 
+    /// <summary>SortBy beyaz listesi (bkz. docs/ARCH.md §6.2).</summary>
+    private static readonly string[] SortFields = ["Name", "Address", "Latitude", "Longitude", "RadiusM", "ContactName", "ContactPhone", "IsActive", "CompanyId", "CreatedAt", "UpdatedAt"];
+
     public ListDeliveryLocationHandler(IRepository<DeliveryLocation> repository) => _repository = repository;
 
     public async Task<PagedResult<DeliveryLocationDto>> Handle(ListDeliveryLocationQuery request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var searchPattern = LikePattern.ContainsOrNull(request.Search) ?? string.Empty;
         var (items, totalCount) = await _repository.ListPagedAsync(
             request.Skip,
             request.PageSize,
-            request.SortBy,
+            SortExpression.Normalize(request.SortBy, SortFields),
             query =>
             {
                 if (request.CompanyId is { } filterCompanyId)
@@ -61,7 +65,7 @@ internal sealed class ListDeliveryLocationHandler : IQueryHandler<ListDeliveryLo
                     query = query.Where(x => x.IsActive == filterIsActive);
                 }
 
-                return string.IsNullOrWhiteSpace(request.Search) ? query : query.Where(x => EF.Functions.ILike(x.Name, $"%{request.Search}%") || EF.Functions.ILike((x.Address ?? string.Empty), $"%{request.Search}%") || EF.Functions.ILike((x.ContactName ?? string.Empty), $"%{request.Search}%") || EF.Functions.ILike((x.ContactPhone ?? string.Empty), $"%{request.Search}%"));
+                return searchPattern.Length == 0 ? query : query.Where(x => EF.Functions.ILike(x.Name, searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.Address ?? string.Empty), searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.ContactName ?? string.Empty), searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.ContactPhone ?? string.Empty), searchPattern, LikePattern.EscapeCharacter));
             },
             cancellationToken);
 

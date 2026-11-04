@@ -14,8 +14,6 @@ public sealed class CreateShipmentCommand : ICommand<Guid>
     public string ShipmentNo { get; set; } = string.Empty;
     /// <summary>Direction.</summary>
     public ShipmentDirection Direction { get; set; }
-    /// <summary>Status.</summary>
-    public ShipmentStatus Status { get; set; }
     /// <summary>PlannedAt.</summary>
     public DateTimeOffset PlannedAt { get; set; }
     /// <summary>Plate.</summary>
@@ -26,8 +24,6 @@ public sealed class CreateShipmentCommand : ICommand<Guid>
     /// <summary>DriverName.</summary>
     [MaxLength(150)]
     public string? DriverName { get; set; }
-    /// <summary>DispatchedAt.</summary>
-    public DateTimeOffset? DispatchedAt { get; set; }
     /// <summary>Note.</summary>
     public string? Note { get; set; }
     /// <summary>StationId.</summary>
@@ -53,12 +49,10 @@ internal sealed class CreateShipmentHandler : ICommandHandler<CreateShipmentComm
         {
             ShipmentNo = request.ShipmentNo,
             Direction = request.Direction,
-            Status = request.Status,
             PlannedAt = request.PlannedAt,
             Plate = request.Plate,
             DriverId = request.DriverId,
             DriverName = request.DriverName,
-            DispatchedAt = request.DispatchedAt,
             Note = request.Note,
             StationId = request.StationId,
             VehicleId = request.VehicleId,
@@ -79,8 +73,6 @@ public sealed class UpdateShipmentCommand : ICommand
     public string ShipmentNo { get; set; } = string.Empty;
     /// <summary>Direction.</summary>
     public ShipmentDirection Direction { get; set; }
-    /// <summary>Status.</summary>
-    public ShipmentStatus Status { get; set; }
     /// <summary>PlannedAt.</summary>
     public DateTimeOffset PlannedAt { get; set; }
     /// <summary>Plate.</summary>
@@ -91,8 +83,6 @@ public sealed class UpdateShipmentCommand : ICommand
     /// <summary>DriverName.</summary>
     [MaxLength(150)]
     public string? DriverName { get; set; }
-    /// <summary>DispatchedAt.</summary>
-    public DateTimeOffset? DispatchedAt { get; set; }
     /// <summary>Note.</summary>
     public string? Note { get; set; }
     /// <summary>StationId.</summary>
@@ -118,12 +108,10 @@ internal sealed class UpdateShipmentHandler : ICommandHandler<UpdateShipmentComm
             ?? throw new NotFoundException("Shipment", request.Id);
         entity.ShipmentNo = request.ShipmentNo;
         entity.Direction = request.Direction;
-        entity.Status = request.Status;
         entity.PlannedAt = request.PlannedAt;
         entity.Plate = request.Plate;
         entity.DriverId = request.DriverId;
         entity.DriverName = request.DriverName;
-        entity.DispatchedAt = request.DispatchedAt;
         entity.Note = request.Note;
         entity.StationId = request.StationId;
         entity.VehicleId = request.VehicleId;

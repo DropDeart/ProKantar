@@ -8,6 +8,10 @@ using Kantar.Data;
 // h2c (TLS'siz HTTP/2) desteği — container/yerel ağda düz HTTP üzerinden gRPC istemci çağrıları için.
 AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
+// Yerel 'dotnet run': .env'deki secret'ları (ConnectionStrings__Default vb.) process environment'a yükler.
+// NoClobber: gerçek ortam değişkenleri (docker-compose) her zaman önceliklidir; dosya yoksa no-op.
+DotNetEnv.Env.NoClobber().Load();
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Merkezi loglama: Serilog + (yapılandırılmışsa) Grafana Loki. Serilog:LokiUrl boşsa
@@ -80,6 +84,9 @@ builder.Services.AddBaseForge(options =>
         jwt.Issuer = builder.Configuration["Auth:Issuer"] ?? string.Empty;
         jwt.Audience = "baseforge-api";
         jwt.RequireHttpsMetadata = false;
+        // Arka plan işlerinden yapılan gRPC çağrıları için Identity client_credentials istemcisi (secret .env'de).
+        jwt.ServiceClientId = builder.Configuration["Auth:ServiceClient:ClientId"];
+        jwt.ServiceClientSecret = builder.Configuration["Auth:ServiceClient:ClientSecret"];
     });
     options.EnableRabbitMq(mq =>
     {
@@ -94,7 +101,8 @@ builder.Services.AddBaseForge(options =>
 builder.Services.AddGrpcClient<Platform.Grpc.VehicleService.VehicleServiceClient>(o =>
     o.Address = new Uri(builder.Configuration["Grpc:Platform"]
         ?? throw new InvalidOperationException("Grpc:Platform tanımlı değil.")))
-    .AddInterceptor<BaseForge.API.Grpc.CorrelationIdClientInterceptor>();
+    .AddInterceptor<BaseForge.API.Grpc.CorrelationIdClientInterceptor>()
+    .AddBaseForgeCallCredentials();
 builder.Services.AddScoped<Kantar.Integration.IVehicleClient, Kantar.Integration.VehicleClient>();
 
 
@@ -155,19 +163,21 @@ app.UseCors("ConfiguredOrigins");
 app.UseStaticFiles(); // wwwroot/uploads — MediaController'ın fiziksel olarak kaydettiği dosyalar için
 app.UseBaseForge();
 app.MapControllers();
-app.MapGrpcService<Kantar.Grpc.StationGrpcService>();
-app.MapGrpcService<Kantar.Grpc.WeighbridgeGrpcService>();
-app.MapGrpcService<Kantar.Grpc.MachineGrpcService>();
-app.MapGrpcService<Kantar.Grpc.CompanyGrpcService>();
-app.MapGrpcService<Kantar.Grpc.DeliveryLocationGrpcService>();
-app.MapGrpcService<Kantar.Grpc.ErpCompanyLinkGrpcService>();
-app.MapGrpcService<Kantar.Grpc.VehicleTypeGrpcService>();
-app.MapGrpcService<Kantar.Grpc.MaterialGrpcService>();
-app.MapGrpcService<Kantar.Grpc.TenantVehicleGrpcService>();
-app.MapGrpcService<Kantar.Grpc.WeighingGrpcService>();
-app.MapGrpcService<Kantar.Grpc.WeighingPhotoGrpcService>();
-app.MapGrpcService<Kantar.Grpc.WeighingAuditLogGrpcService>();
-app.MapGrpcService<Kantar.Grpc.WaybillGrpcService>();
-app.MapGrpcService<Kantar.Grpc.ShipmentGrpcService>();
-app.MapGrpcService<Kantar.Grpc.ShipmentStopGrpcService>();
+// gRPC uçları kimlik doğrulaması ister: kullanıcı token'ı (çağıran servis iletir) ya da servis token'ı
+// (client_credentials). Bkz. docs/ARCH.md §5.1.1.
+app.MapGrpcService<Kantar.Grpc.StationGrpcService>().RequireAuthorization();
+app.MapGrpcService<Kantar.Grpc.WeighbridgeGrpcService>().RequireAuthorization();
+app.MapGrpcService<Kantar.Grpc.MachineGrpcService>().RequireAuthorization();
+app.MapGrpcService<Kantar.Grpc.CompanyGrpcService>().RequireAuthorization();
+app.MapGrpcService<Kantar.Grpc.DeliveryLocationGrpcService>().RequireAuthorization();
+app.MapGrpcService<Kantar.Grpc.ErpCompanyLinkGrpcService>().RequireAuthorization();
+app.MapGrpcService<Kantar.Grpc.VehicleTypeGrpcService>().RequireAuthorization();
+app.MapGrpcService<Kantar.Grpc.MaterialGrpcService>().RequireAuthorization();
+app.MapGrpcService<Kantar.Grpc.TenantVehicleGrpcService>().RequireAuthorization();
+app.MapGrpcService<Kantar.Grpc.WeighingGrpcService>().RequireAuthorization();
+app.MapGrpcService<Kantar.Grpc.WeighingPhotoGrpcService>().RequireAuthorization();
+app.MapGrpcService<Kantar.Grpc.WeighingAuditLogGrpcService>().RequireAuthorization();
+app.MapGrpcService<Kantar.Grpc.WaybillGrpcService>().RequireAuthorization();
+app.MapGrpcService<Kantar.Grpc.ShipmentGrpcService>().RequireAuthorization();
+app.MapGrpcService<Kantar.Grpc.ShipmentStopGrpcService>().RequireAuthorization();
 app.Run();

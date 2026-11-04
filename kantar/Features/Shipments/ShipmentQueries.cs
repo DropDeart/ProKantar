@@ -52,15 +52,19 @@ internal sealed class ListShipmentHandler : IQueryHandler<ListShipmentQuery, Pag
 {
     private readonly IRepository<Shipment> _repository;
 
+    /// <summary>SortBy beyaz listesi (bkz. docs/ARCH.md §6.2).</summary>
+    private static readonly string[] SortFields = ["ShipmentNo", "Direction", "Status", "PlannedAt", "Plate", "DriverId", "DriverName", "DispatchedAt", "Note", "StationId", "VehicleId", "CreatedAt", "UpdatedAt"];
+
     public ListShipmentHandler(IRepository<Shipment> repository) => _repository = repository;
 
     public async Task<PagedResult<ShipmentDto>> Handle(ListShipmentQuery request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var searchPattern = LikePattern.ContainsOrNull(request.Search) ?? string.Empty;
         var (items, totalCount) = await _repository.ListPagedAsync(
             request.Skip,
             request.PageSize,
-            request.SortBy,
+            SortExpression.Normalize(request.SortBy, SortFields),
             query =>
             {
                 if (request.StationId is { } filterStationId)
@@ -93,7 +97,7 @@ internal sealed class ListShipmentHandler : IQueryHandler<ListShipmentQuery, Pag
                     query = query.Where(x => x.Plate == filterPlate);
                 }
 
-                return string.IsNullOrWhiteSpace(request.Search) ? query : query.Where(x => EF.Functions.ILike(x.ShipmentNo, $"%{request.Search}%") || EF.Functions.ILike(x.Plate, $"%{request.Search}%") || EF.Functions.ILike((x.DriverName ?? string.Empty), $"%{request.Search}%") || EF.Functions.ILike((x.Note ?? string.Empty), $"%{request.Search}%"));
+                return searchPattern.Length == 0 ? query : query.Where(x => EF.Functions.ILike(x.ShipmentNo, searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike(x.Plate, searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.DriverName ?? string.Empty), searchPattern, LikePattern.EscapeCharacter));
             },
             cancellationToken);
 

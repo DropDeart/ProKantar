@@ -11,8 +11,6 @@ public sealed class CreateTenantVehicleCommand : ICommand<Guid>
 {
     /// <summary>StoredTareKg.</summary>
     public decimal? StoredTareKg { get; set; }
-    /// <summary>StoredTareAt.</summary>
-    public DateTimeOffset? StoredTareAt { get; set; }
     /// <summary>IsBlacklisted.</summary>
     public bool IsBlacklisted { get; set; } = false;
     /// <summary>BlacklistReason.</summary>
@@ -42,7 +40,6 @@ internal sealed class CreateTenantVehicleHandler : ICommandHandler<CreateTenantV
         var entity = new TenantVehicle
         {
             StoredTareKg = request.StoredTareKg,
-            StoredTareAt = request.StoredTareAt,
             IsBlacklisted = request.IsBlacklisted,
             BlacklistReason = request.BlacklistReason,
             Note = request.Note,
@@ -62,8 +59,6 @@ public sealed class UpdateTenantVehicleCommand : ICommand
     public Guid Id { get; set; }
     /// <summary>StoredTareKg.</summary>
     public decimal? StoredTareKg { get; set; }
-    /// <summary>StoredTareAt.</summary>
-    public DateTimeOffset? StoredTareAt { get; set; }
     /// <summary>IsBlacklisted.</summary>
     public bool IsBlacklisted { get; set; } = false;
     /// <summary>BlacklistReason.</summary>
@@ -93,7 +88,6 @@ internal sealed class UpdateTenantVehicleHandler : ICommandHandler<UpdateTenantV
         var entity = await _repository.GetByIdAsync(request.Id, cancellationToken)
             ?? throw new NotFoundException("TenantVehicle", request.Id);
         entity.StoredTareKg = request.StoredTareKg;
-        entity.StoredTareAt = request.StoredTareAt;
         entity.IsBlacklisted = request.IsBlacklisted;
         entity.BlacklistReason = request.BlacklistReason;
         entity.Note = request.Note;

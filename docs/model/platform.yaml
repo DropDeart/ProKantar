@@ -20,6 +20,7 @@ entities:
   Carrier:
     ownerField: OwnerUserId
     filterable: [TaxNo]
+    searchFields: [Name, TaxNo]
     access:
       list: authenticated
       getById: authenticated
@@ -37,6 +38,7 @@ entities:
   Driver:
     ownerField: UserId
     filterable: [CarrierId, Phone]
+    searchFields: [FullName, Phone]
     access:
       list: [owner]
       getById: [Operator, TenantAdmin, owner]
@@ -61,6 +63,7 @@ entities:
   Vehicle:
     ownerField: OwnerUserId
     filterable: [Plate, CarrierId, IsClaimed]
+    searchFields: [Plate, Brand, Model]
     access:
       list: authenticated
       getById: authenticated
@@ -73,7 +76,7 @@ entities:
       vehicleTypeCode: { type: string, nullable: true, maxLength: 30 }
       brand: { type: string, nullable: true, maxLength: 50 }
       model: { type: string, nullable: true, maxLength: 50 }
-      isClaimed: { type: bool, default: "false" }                             # operatör açtıysa false; şoför sahiplenince true
+      isClaimed: { type: bool, default: "false", serverManaged: true }        # operatör açtıysa false; şoför sahiplenince true (claim ucu)
     relations:
       carrier:
         kind: many-to-one
@@ -138,7 +141,7 @@ entities:
       platform: { type: enum, values: [Android, Ios] }
       pushToken: { type: string, nullable: true, maxLength: 500 }
       appVersion: { type: string, nullable: true, maxLength: 20 }
-      lastSeenAt: { type: datetime, nullable: true }
+      lastSeenAt: { type: datetime, nullable: true, serverManaged: true }     # tracking ping'i günceller
     relations:
       driver:
         kind: many-to-one

@@ -43,15 +43,19 @@ internal sealed class ListShipmentStopHandler : IQueryHandler<ListShipmentStopQu
 {
     private readonly IRepository<ShipmentStop> _repository;
 
+    /// <summary>SortBy beyaz listesi (bkz. docs/ARCH.md §6.2).</summary>
+    private static readonly string[] SortFields = ["Sequence", "StopType", "Name", "Latitude", "Longitude", "RadiusM", "PlannedAt", "Note", "ShipmentId", "DeliveryLocationId", "StationId", "WaybillId", "CreatedAt", "UpdatedAt"];
+
     public ListShipmentStopHandler(IRepository<ShipmentStop> repository) => _repository = repository;
 
     public async Task<PagedResult<ShipmentStopDto>> Handle(ListShipmentStopQuery request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var searchPattern = LikePattern.ContainsOrNull(request.Search) ?? string.Empty;
         var (items, totalCount) = await _repository.ListPagedAsync(
             request.Skip,
             request.PageSize,
-            request.SortBy,
+            SortExpression.Normalize(request.SortBy, SortFields),
             query =>
             {
                 if (request.ShipmentId is { } filterShipmentId)
@@ -69,7 +73,7 @@ internal sealed class ListShipmentStopHandler : IQueryHandler<ListShipmentStopQu
                     query = query.Where(x => x.WaybillId == filterWaybillId);
                 }
 
-                return string.IsNullOrWhiteSpace(request.Search) ? query : query.Where(x => EF.Functions.ILike(x.Name, $"%{request.Search}%") || EF.Functions.ILike((x.Note ?? string.Empty), $"%{request.Search}%"));
+                return searchPattern.Length == 0 ? query : query.Where(x => EF.Functions.ILike(x.Name, searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.Note ?? string.Empty), searchPattern, LikePattern.EscapeCharacter));
             },
             cancellationToken);
 

@@ -63,15 +63,19 @@ internal sealed class ListVehicleHandler : IQueryHandler<ListVehicleQuery, Paged
 {
     private readonly IRepository<Vehicle> _repository;
 
+    /// <summary>SortBy beyaz listesi (bkz. docs/ARCH.md §6.2).</summary>
+    private static readonly string[] SortFields = ["OwnerUserId", "Plate", "VehicleTypeCode", "Brand", "Model", "IsClaimed", "CarrierId", "CreatedAt", "UpdatedAt"];
+
     public ListVehicleHandler(IRepository<Vehicle> repository) => _repository = repository;
 
     public async Task<PagedResult<VehicleDto>> Handle(ListVehicleQuery request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var searchPattern = LikePattern.ContainsOrNull(request.Search) ?? string.Empty;
         var (items, totalCount) = await _repository.ListPagedAsync(
             request.Skip,
             request.PageSize,
-            request.SortBy,
+            SortExpression.Normalize(request.SortBy, SortFields),
             query =>
             {
                 if (request.RestrictToOwnerId is { } ownerId)
@@ -94,7 +98,7 @@ internal sealed class ListVehicleHandler : IQueryHandler<ListVehicleQuery, Paged
                     query = query.Where(x => x.IsClaimed == filterIsClaimed);
                 }
 
-                return string.IsNullOrWhiteSpace(request.Search) ? query : query.Where(x => EF.Functions.ILike(x.Plate, $"%{request.Search}%") || EF.Functions.ILike((x.VehicleTypeCode ?? string.Empty), $"%{request.Search}%") || EF.Functions.ILike((x.Brand ?? string.Empty), $"%{request.Search}%") || EF.Functions.ILike((x.Model ?? string.Empty), $"%{request.Search}%"));
+                return searchPattern.Length == 0 ? query : query.Where(x => EF.Functions.ILike(x.Plate, searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.Brand ?? string.Empty), searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.Model ?? string.Empty), searchPattern, LikePattern.EscapeCharacter));
             },
             cancellationToken);
 

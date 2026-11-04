@@ -55,15 +55,19 @@ internal sealed class ListWaybillHandler : IQueryHandler<ListWaybillQuery, Paged
 {
     private readonly IRepository<Waybill> _repository;
 
+    /// <summary>SortBy beyaz listesi (bkz. docs/ARCH.md §6.2).</summary>
+    private static readonly string[] SortFields = ["WaybillNo", "WaybillType", "IssuedAt", "QuantityKg", "DeliveryAddress", "EDespatchUuid", "EDespatchStatus", "ErpSyncStatus", "ErpDocNo", "ErpSyncedAt", "ErpError", "WeighingId", "CompanyId", "DeliveryLocationId", "CreatedAt", "UpdatedAt"];
+
     public ListWaybillHandler(IRepository<Waybill> repository) => _repository = repository;
 
     public async Task<PagedResult<WaybillDto>> Handle(ListWaybillQuery request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var searchPattern = LikePattern.ContainsOrNull(request.Search) ?? string.Empty;
         var (items, totalCount) = await _repository.ListPagedAsync(
             request.Skip,
             request.PageSize,
-            request.SortBy,
+            SortExpression.Normalize(request.SortBy, SortFields),
             query =>
             {
                 if (request.WeighingId is { } filterWeighingId)
@@ -101,7 +105,7 @@ internal sealed class ListWaybillHandler : IQueryHandler<ListWaybillQuery, Paged
                     query = query.Where(x => x.EDespatchStatus == filterEDespatchStatus);
                 }
 
-                return string.IsNullOrWhiteSpace(request.Search) ? query : query.Where(x => EF.Functions.ILike(x.WaybillNo, $"%{request.Search}%") || EF.Functions.ILike((x.DeliveryAddress ?? string.Empty), $"%{request.Search}%") || EF.Functions.ILike((x.ErpDocNo ?? string.Empty), $"%{request.Search}%") || EF.Functions.ILike((x.ErpError ?? string.Empty), $"%{request.Search}%"));
+                return searchPattern.Length == 0 ? query : query.Where(x => EF.Functions.ILike(x.WaybillNo, searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.DeliveryAddress ?? string.Empty), searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.ErpDocNo ?? string.Empty), searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.ErpError ?? string.Empty), searchPattern, LikePattern.EscapeCharacter));
             },
             cancellationToken);
 

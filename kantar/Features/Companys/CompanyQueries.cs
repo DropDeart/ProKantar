@@ -49,15 +49,19 @@ internal sealed class ListCompanyHandler : IQueryHandler<ListCompanyQuery, Paged
 {
     private readonly IRepository<Company> _repository;
 
+    /// <summary>SortBy beyaz listesi (bkz. docs/ARCH.md §6.2).</summary>
+    private static readonly string[] SortFields = ["Name", "ShortName", "TaxNo", "TaxOffice", "IsCustomer", "IsSupplier", "IsCarrier", "Phone", "Email", "Address", "IsActive", "CreatedAt", "UpdatedAt"];
+
     public ListCompanyHandler(IRepository<Company> repository) => _repository = repository;
 
     public async Task<PagedResult<CompanyDto>> Handle(ListCompanyQuery request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var searchPattern = LikePattern.ContainsOrNull(request.Search) ?? string.Empty;
         var (items, totalCount) = await _repository.ListPagedAsync(
             request.Skip,
             request.PageSize,
-            request.SortBy,
+            SortExpression.Normalize(request.SortBy, SortFields),
             query =>
             {
                 if (request.IsCustomer is { } filterIsCustomer)
@@ -85,7 +89,7 @@ internal sealed class ListCompanyHandler : IQueryHandler<ListCompanyQuery, Paged
                     query = query.Where(x => x.TaxNo == filterTaxNo);
                 }
 
-                return string.IsNullOrWhiteSpace(request.Search) ? query : query.Where(x => EF.Functions.ILike(x.Name, $"%{request.Search}%") || EF.Functions.ILike((x.ShortName ?? string.Empty), $"%{request.Search}%") || EF.Functions.ILike((x.TaxNo ?? string.Empty), $"%{request.Search}%") || EF.Functions.ILike((x.TaxOffice ?? string.Empty), $"%{request.Search}%") || EF.Functions.ILike((x.Phone ?? string.Empty), $"%{request.Search}%") || EF.Functions.ILike((x.Email ?? string.Empty), $"%{request.Search}%") || EF.Functions.ILike((x.Address ?? string.Empty), $"%{request.Search}%"));
+                return searchPattern.Length == 0 ? query : query.Where(x => EF.Functions.ILike(x.Name, searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.ShortName ?? string.Empty), searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.TaxNo ?? string.Empty), searchPattern, LikePattern.EscapeCharacter));
             },
             cancellationToken);
 

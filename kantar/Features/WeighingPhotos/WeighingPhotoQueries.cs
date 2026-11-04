@@ -40,15 +40,19 @@ internal sealed class ListWeighingPhotoHandler : IQueryHandler<ListWeighingPhoto
 {
     private readonly IRepository<WeighingPhoto> _repository;
 
+    /// <summary>SortBy beyaz listesi (bkz. docs/ARCH.md §6.2).</summary>
+    private static readonly string[] SortFields = ["Stage", "CameraName", "Url", "TakenAt", "WeighingId", "CreatedAt", "UpdatedAt"];
+
     public ListWeighingPhotoHandler(IRepository<WeighingPhoto> repository) => _repository = repository;
 
     public async Task<PagedResult<WeighingPhotoDto>> Handle(ListWeighingPhotoQuery request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var searchPattern = LikePattern.ContainsOrNull(request.Search) ?? string.Empty;
         var (items, totalCount) = await _repository.ListPagedAsync(
             request.Skip,
             request.PageSize,
-            request.SortBy,
+            SortExpression.Normalize(request.SortBy, SortFields),
             query =>
             {
                 if (request.WeighingId is { } filterWeighingId)
@@ -61,7 +65,7 @@ internal sealed class ListWeighingPhotoHandler : IQueryHandler<ListWeighingPhoto
                     query = query.Where(x => x.Stage == filterStage);
                 }
 
-                return string.IsNullOrWhiteSpace(request.Search) ? query : query.Where(x => EF.Functions.ILike((x.CameraName ?? string.Empty), $"%{request.Search}%") || EF.Functions.ILike(x.Url, $"%{request.Search}%"));
+                return searchPattern.Length == 0 ? query : query.Where(x => EF.Functions.ILike((x.CameraName ?? string.Empty), searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike(x.Url, searchPattern, LikePattern.EscapeCharacter));
             },
             cancellationToken);
 

@@ -22,7 +22,7 @@ public sealed class WaybillDto
     /// <summary>EDespatchStatus.</summary>
     public WaybillEDespatchStatus? EDespatchStatus { get; set; }
     /// <summary>ErpSyncStatus.</summary>
-    public WaybillErpSyncStatus ErpSyncStatus { get; set; }
+    public WaybillErpSyncStatus ErpSyncStatus { get; set; } = WaybillErpSyncStatus.Pending;
     /// <summary>ErpDocNo.</summary>
     public string? ErpDocNo { get; set; }
     /// <summary>ErpSyncedAt.</summary>

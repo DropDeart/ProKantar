@@ -23,8 +23,6 @@ public sealed class CreateVehicleCommand : ICommand<Guid>
     /// <summary>Model.</summary>
     [MaxLength(50)]
     public string? Model { get; set; }
-    /// <summary>IsClaimed.</summary>
-    public bool IsClaimed { get; set; } = false;
     /// <summary>CarrierId.</summary>
     public Guid? CarrierId { get; set; }
 }
@@ -49,7 +47,6 @@ internal sealed class CreateVehicleHandler : ICommandHandler<CreateVehicleComman
             VehicleTypeCode = request.VehicleTypeCode,
             Brand = request.Brand,
             Model = request.Model,
-            IsClaimed = request.IsClaimed,
             CarrierId = request.CarrierId,
         };
         await _repository.AddAsync(entity, cancellationToken);
@@ -77,8 +74,6 @@ public sealed class UpdateVehicleCommand : ICommand
     /// <summary>Model.</summary>
     [MaxLength(50)]
     public string? Model { get; set; }
-    /// <summary>IsClaimed.</summary>
-    public bool IsClaimed { get; set; } = false;
     /// <summary>CarrierId.</summary>
     public Guid? CarrierId { get; set; }
 
@@ -115,7 +110,6 @@ internal sealed class UpdateVehicleHandler : ICommandHandler<UpdateVehicleComman
         entity.VehicleTypeCode = request.VehicleTypeCode;
         entity.Brand = request.Brand;
         entity.Model = request.Model;
-        entity.IsClaimed = request.IsClaimed;
         entity.CarrierId = request.CarrierId;
         await _repository.UpdateAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

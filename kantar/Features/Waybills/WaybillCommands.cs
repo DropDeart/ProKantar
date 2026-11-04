@@ -21,19 +21,6 @@ public sealed class CreateWaybillCommand : ICommand<Guid>
     public decimal? QuantityKg { get; set; }
     /// <summary>DeliveryAddress.</summary>
     public string? DeliveryAddress { get; set; }
-    /// <summary>EDespatchUuid.</summary>
-    public Guid? EDespatchUuid { get; set; }
-    /// <summary>EDespatchStatus.</summary>
-    public WaybillEDespatchStatus? EDespatchStatus { get; set; }
-    /// <summary>ErpSyncStatus.</summary>
-    public WaybillErpSyncStatus ErpSyncStatus { get; set; }
-    /// <summary>ErpDocNo.</summary>
-    [MaxLength(50)]
-    public string? ErpDocNo { get; set; }
-    /// <summary>ErpSyncedAt.</summary>
-    public DateTimeOffset? ErpSyncedAt { get; set; }
-    /// <summary>ErpError.</summary>
-    public string? ErpError { get; set; }
     /// <summary>WeighingId.</summary>
     public Guid WeighingId { get; set; }
     /// <summary>CompanyId.</summary>
@@ -65,12 +52,6 @@ internal sealed class CreateWaybillHandler : ICommandHandler<CreateWaybillComman
             IssuedAt = request.IssuedAt,
             QuantityKg = request.QuantityKg,
             DeliveryAddress = request.DeliveryAddress,
-            EDespatchUuid = request.EDespatchUuid,
-            EDespatchStatus = request.EDespatchStatus,
-            ErpSyncStatus = request.ErpSyncStatus,
-            ErpDocNo = request.ErpDocNo,
-            ErpSyncedAt = request.ErpSyncedAt,
-            ErpError = request.ErpError,
             WeighingId = request.WeighingId,
             CompanyId = request.CompanyId,
             DeliveryLocationId = request.DeliveryLocationId,
@@ -98,19 +79,6 @@ public sealed class UpdateWaybillCommand : ICommand
     public decimal? QuantityKg { get; set; }
     /// <summary>DeliveryAddress.</summary>
     public string? DeliveryAddress { get; set; }
-    /// <summary>EDespatchUuid.</summary>
-    public Guid? EDespatchUuid { get; set; }
-    /// <summary>EDespatchStatus.</summary>
-    public WaybillEDespatchStatus? EDespatchStatus { get; set; }
-    /// <summary>ErpSyncStatus.</summary>
-    public WaybillErpSyncStatus ErpSyncStatus { get; set; }
-    /// <summary>ErpDocNo.</summary>
-    [MaxLength(50)]
-    public string? ErpDocNo { get; set; }
-    /// <summary>ErpSyncedAt.</summary>
-    public DateTimeOffset? ErpSyncedAt { get; set; }
-    /// <summary>ErpError.</summary>
-    public string? ErpError { get; set; }
     /// <summary>WeighingId.</summary>
     public Guid WeighingId { get; set; }
     /// <summary>CompanyId.</summary>
@@ -139,12 +107,6 @@ internal sealed class UpdateWaybillHandler : ICommandHandler<UpdateWaybillComman
         entity.IssuedAt = request.IssuedAt;
         entity.QuantityKg = request.QuantityKg;
         entity.DeliveryAddress = request.DeliveryAddress;
-        entity.EDespatchUuid = request.EDespatchUuid;
-        entity.EDespatchStatus = request.EDespatchStatus;
-        entity.ErpSyncStatus = request.ErpSyncStatus;
-        entity.ErpDocNo = request.ErpDocNo;
-        entity.ErpSyncedAt = request.ErpSyncedAt;
-        entity.ErpError = request.ErpError;
         entity.WeighingId = request.WeighingId;
         entity.CompanyId = request.CompanyId;
         entity.DeliveryLocationId = request.DeliveryLocationId;

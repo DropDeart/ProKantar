@@ -8,6 +8,10 @@ using Platform.Data;
 // h2c (TLS'siz HTTP/2) desteği — container/yerel ağda düz HTTP üzerinden gRPC istemci çağrıları için.
 AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
+// Yerel 'dotnet run': .env'deki secret'ları (ConnectionStrings__Default vb.) process environment'a yükler.
+// NoClobber: gerçek ortam değişkenleri (docker-compose) her zaman önceliklidir; dosya yoksa no-op.
+DotNetEnv.Env.NoClobber().Load();
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Merkezi loglama: Serilog + (yapılandırılmışsa) Grafana Loki. Serilog:LokiUrl boşsa
@@ -79,6 +83,9 @@ builder.Services.AddBaseForge(options =>
         jwt.Issuer = builder.Configuration["Auth:Issuer"] ?? string.Empty;
         jwt.Audience = "baseforge-api";
         jwt.RequireHttpsMetadata = false;
+        // Arka plan işlerinden yapılan gRPC çağrıları için Identity client_credentials istemcisi (secret .env'de).
+        jwt.ServiceClientId = builder.Configuration["Auth:ServiceClient:ClientId"];
+        jwt.ServiceClientSecret = builder.Configuration["Auth:ServiceClient:ClientSecret"];
     });
 });
 
@@ -141,10 +148,12 @@ app.UseCors("ConfiguredOrigins");
 app.UseStaticFiles(); // wwwroot/uploads — MediaController'ın fiziksel olarak kaydettiği dosyalar için
 app.UseBaseForge();
 app.MapControllers();
-app.MapGrpcService<Platform.Grpc.CarrierGrpcService>();
-app.MapGrpcService<Platform.Grpc.DriverGrpcService>();
-app.MapGrpcService<Platform.Grpc.VehicleGrpcService>();
-app.MapGrpcService<Platform.Grpc.TrailerGrpcService>();
-app.MapGrpcService<Platform.Grpc.DriverVehicleGrpcService>();
-app.MapGrpcService<Platform.Grpc.DeviceGrpcService>();
+// gRPC uçları kimlik doğrulaması ister: kullanıcı token'ı (çağıran servis iletir) ya da servis token'ı
+// (client_credentials). Bkz. docs/ARCH.md §5.1.1.
+app.MapGrpcService<Platform.Grpc.CarrierGrpcService>().RequireAuthorization();
+app.MapGrpcService<Platform.Grpc.DriverGrpcService>().RequireAuthorization();
+app.MapGrpcService<Platform.Grpc.VehicleGrpcService>().RequireAuthorization();
+app.MapGrpcService<Platform.Grpc.TrailerGrpcService>().RequireAuthorization();
+app.MapGrpcService<Platform.Grpc.DriverVehicleGrpcService>().RequireAuthorization();
+app.MapGrpcService<Platform.Grpc.DeviceGrpcService>().RequireAuthorization();
 app.Run();

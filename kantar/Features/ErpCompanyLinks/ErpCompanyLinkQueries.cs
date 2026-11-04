@@ -43,15 +43,19 @@ internal sealed class ListErpCompanyLinkHandler : IQueryHandler<ListErpCompanyLi
 {
     private readonly IRepository<ErpCompanyLink> _repository;
 
+    /// <summary>SortBy beyaz listesi (bkz. docs/ARCH.md §6.2).</summary>
+    private static readonly string[] SortFields = ["ErpSystem", "ErpCode", "IsDefault", "CompanyId", "CreatedAt", "UpdatedAt"];
+
     public ListErpCompanyLinkHandler(IRepository<ErpCompanyLink> repository) => _repository = repository;
 
     public async Task<PagedResult<ErpCompanyLinkDto>> Handle(ListErpCompanyLinkQuery request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var searchPattern = LikePattern.ContainsOrNull(request.Search) ?? string.Empty;
         var (items, totalCount) = await _repository.ListPagedAsync(
             request.Skip,
             request.PageSize,
-            request.SortBy,
+            SortExpression.Normalize(request.SortBy, SortFields),
             query =>
             {
                 if (request.CompanyId is { } filterCompanyId)
@@ -69,7 +73,7 @@ internal sealed class ListErpCompanyLinkHandler : IQueryHandler<ListErpCompanyLi
                     query = query.Where(x => x.ErpCode == filterErpCode);
                 }
 
-                return string.IsNullOrWhiteSpace(request.Search) ? query : query.Where(x => EF.Functions.ILike(x.ErpSystem, $"%{request.Search}%") || EF.Functions.ILike(x.ErpCode, $"%{request.Search}%"));
+                return searchPattern.Length == 0 ? query : query.Where(x => EF.Functions.ILike(x.ErpSystem, searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike(x.ErpCode, searchPattern, LikePattern.EscapeCharacter));
             },
             cancellationToken);
 

@@ -12,7 +12,7 @@ public sealed class ShipmentDto
     /// <summary>Direction.</summary>
     public ShipmentDirection Direction { get; set; }
     /// <summary>Status.</summary>
-    public ShipmentStatus Status { get; set; }
+    public ShipmentStatus Status { get; set; } = ShipmentStatus.Draft;
     /// <summary>PlannedAt.</summary>
     public DateTimeOffset PlannedAt { get; set; }
     /// <summary>Plate.</summary>

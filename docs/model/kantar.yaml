@@ -77,6 +77,7 @@ entities:
 
   Company:
     filterable: [IsCustomer, IsSupplier, IsCarrier, IsActive, TaxNo]
+    searchFields: [Name, ShortName, TaxNo]
     access:
       list: [TenantAdmin, Operator]
       getById: [TenantAdmin, Operator]
@@ -174,7 +175,7 @@ entities:
       delete: [TenantAdmin]
     props:
       storedTareKg: { type: decimal, nullable: true }
-      storedTareAt: { type: datetime, nullable: true }
+      storedTareAt: { type: datetime, nullable: true, serverManaged: true }   # dara kaydedilince sunucu yazar
       isBlacklisted: { type: bool, default: "false" }
       blacklistReason: { type: string, nullable: true, maxLength: 250 }
       note: { type: text, nullable: true }
@@ -192,6 +193,7 @@ entities:
   Weighing:
     publishes: [created, updated]
     filterable: [StationId, WeighbridgeId, CompanyId, MaterialId, VehicleId, DriverId, Status, Direction, Plate, TicketNo]
+    searchFields: [TicketNo, Plate, TrailerPlate, DriverName]
     access:
       list: [TenantAdmin, Operator]
       getById: [TenantAdmin, Operator]
@@ -201,7 +203,7 @@ entities:
     props:
       ticketNo: { type: string, maxLength: 30 }                               # kiracı+istasyon içinde UNIQUE elle
       direction: { type: enum, values: [Inbound, Outbound] }                  # Giriş/Alış · Çıkış/Satış
-      status: { type: enum, values: [Open, Completed, Cancelled] }
+      status: { type: enum, values: [Open, Completed, Cancelled], default: "Open", serverManaged: true } # CompleteWeighing / iptal komutu
       plate: { type: string, maxLength: 15 }                                  # snapshot
       trailerId: { type: guid, nullable: true }                               # platform/Trailer (yalnız ID)
       trailerPlate: { type: string, nullable: true, maxLength: 15 }           # snapshot
@@ -211,15 +213,15 @@ entities:
       firstWeightKg: decimal
       firstWeighedAt: datetime
       firstIsManual: { type: bool, default: "false" }
-      secondWeighbridgeId: { type: guid, nullable: true }                     # FK elle (aynı hedefe 2. ilişki)
-      secondWeightKg: { type: decimal, nullable: true }
-      secondWeighedAt: { type: datetime, nullable: true }
-      secondIsManual: { type: bool, default: "false" }
-      grossKg: { type: decimal, nullable: true }                              # sunucu hesaplar
-      tareKg: { type: decimal, nullable: true }                               # sunucu hesaplar
-      netKg: { type: decimal, nullable: true }                                # sunucu hesaplar
-      tareSource: { type: enum, values: [Measured, Stored], nullable: true }
-      cancelReason: { type: string, nullable: true, maxLength: 250 }
+      secondWeighbridgeId: { type: guid, nullable: true, serverManaged: true } # FK elle (aynı hedefe 2. ilişki)
+      secondWeightKg: { type: decimal, nullable: true, serverManaged: true }
+      secondWeighedAt: { type: datetime, nullable: true, serverManaged: true }
+      secondIsManual: { type: bool, default: "false", serverManaged: true }
+      grossKg: { type: decimal, nullable: true, serverManaged: true }         # sunucu hesaplar
+      tareKg: { type: decimal, nullable: true, serverManaged: true }          # sunucu hesaplar
+      netKg: { type: decimal, nullable: true, serverManaged: true }           # sunucu hesaplar
+      tareSource: { type: enum, values: [Measured, Stored], nullable: true, serverManaged: true }
+      cancelReason: { type: string, nullable: true, maxLength: 250, serverManaged: true }
       note: { type: text, nullable: true }
     relations:
       station:
@@ -295,12 +297,12 @@ entities:
       issuedAt: datetime
       quantityKg: { type: decimal, nullable: true }                           # çoklu teslimde bu irsaliyenin payı; null = tartımın tamamı
       deliveryAddress: { type: text, nullable: true }                         # snapshot
-      eDespatchUuid: { type: guid, nullable: true }
-      eDespatchStatus: { type: enum, values: [Draft, Sent, Accepted, Rejected], nullable: true }
-      erpSyncStatus: { type: enum, values: [Pending, Sent, Failed] }
-      erpDocNo: { type: string, nullable: true, maxLength: 50 }
-      erpSyncedAt: { type: datetime, nullable: true }
-      erpError: { type: text, nullable: true }
+      eDespatchUuid: { type: guid, nullable: true, serverManaged: true }
+      eDespatchStatus: { type: enum, values: [Draft, Sent, Accepted, Rejected], nullable: true, serverManaged: true }
+      erpSyncStatus: { type: enum, values: [Pending, Sent, Failed], default: "Pending", serverManaged: true }
+      erpDocNo: { type: string, nullable: true, maxLength: 50, serverManaged: true }
+      erpSyncedAt: { type: datetime, nullable: true, serverManaged: true }
+      erpError: { type: text, nullable: true, serverManaged: true }
     relations:
       weighing:
         kind: many-to-one
@@ -316,6 +318,7 @@ entities:
 
   Shipment:
     filterable: [StationId, VehicleId, DriverId, Direction, Status, Plate]
+    searchFields: [ShipmentNo, Plate, DriverName]
     access:
       list: [TenantAdmin, Operator]
       getById: [TenantAdmin, Operator]
@@ -325,12 +328,12 @@ entities:
     props:
       shipmentNo: { type: string, maxLength: 30 }
       direction: { type: enum, values: [Inbound, Outbound] }                  # Inbound = gelen araç randevusu
-      status: { type: enum, values: [Draft, Dispatched, InProgress, Completed, Cancelled] }# Dispatched'a yalnız elle yazılan DispatchShipment komutu geçirir
+      status: { type: enum, values: [Draft, Dispatched, InProgress, Completed, Cancelled], default: "Draft", serverManaged: true } # Dispatched'a yalnız elle yazılan DispatchShipment komutu geçirir
       plannedAt: datetime
       plate: { type: string, maxLength: 15 }                                  # snapshot
       driverId: { type: guid, nullable: true }                                # platform/Driver (yalnız ID)
       driverName: { type: string, nullable: true, maxLength: 150 }            # snapshot
-      dispatchedAt: { type: datetime, nullable: true }
+      dispatchedAt: { type: datetime, nullable: true, serverManaged: true }
       note: { type: text, nullable: true }
     relations:
       station:

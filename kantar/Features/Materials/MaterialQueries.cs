@@ -43,15 +43,19 @@ internal sealed class ListMaterialHandler : IQueryHandler<ListMaterialQuery, Pag
 {
     private readonly IRepository<Material> _repository;
 
+    /// <summary>SortBy beyaz listesi (bkz. docs/ARCH.md §6.2).</summary>
+    private static readonly string[] SortFields = ["Code", "Name", "Unit", "KgPerUnit", "ErpStockCode", "IsActive", "CreatedAt", "UpdatedAt"];
+
     public ListMaterialHandler(IRepository<Material> repository) => _repository = repository;
 
     public async Task<PagedResult<MaterialDto>> Handle(ListMaterialQuery request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var searchPattern = LikePattern.ContainsOrNull(request.Search) ?? string.Empty;
         var (items, totalCount) = await _repository.ListPagedAsync(
             request.Skip,
             request.PageSize,
-            request.SortBy,
+            SortExpression.Normalize(request.SortBy, SortFields),
             query =>
             {
                 if (request.Code is { } filterCode)
@@ -69,7 +73,7 @@ internal sealed class ListMaterialHandler : IQueryHandler<ListMaterialQuery, Pag
                     query = query.Where(x => x.IsActive == filterIsActive);
                 }
 
-                return string.IsNullOrWhiteSpace(request.Search) ? query : query.Where(x => EF.Functions.ILike(x.Code, $"%{request.Search}%") || EF.Functions.ILike(x.Name, $"%{request.Search}%") || EF.Functions.ILike((x.ErpStockCode ?? string.Empty), $"%{request.Search}%"));
+                return searchPattern.Length == 0 ? query : query.Where(x => EF.Functions.ILike(x.Code, searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike(x.Name, searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.ErpStockCode ?? string.Empty), searchPattern, LikePattern.EscapeCharacter));
             },
             cancellationToken);
 

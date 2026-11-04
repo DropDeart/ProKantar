@@ -40,15 +40,19 @@ internal sealed class ListMachineHandler : IQueryHandler<ListMachineQuery, Paged
 {
     private readonly IRepository<Machine> _repository;
 
+    /// <summary>SortBy beyaz listesi (bkz. docs/ARCH.md §6.2).</summary>
+    private static readonly string[] SortFields = ["Name", "MachineType", "PlateOrSerial", "IsActive", "StationId", "CreatedAt", "UpdatedAt"];
+
     public ListMachineHandler(IRepository<Machine> repository) => _repository = repository;
 
     public async Task<PagedResult<MachineDto>> Handle(ListMachineQuery request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var searchPattern = LikePattern.ContainsOrNull(request.Search) ?? string.Empty;
         var (items, totalCount) = await _repository.ListPagedAsync(
             request.Skip,
             request.PageSize,
-            request.SortBy,
+            SortExpression.Normalize(request.SortBy, SortFields),
             query =>
             {
                 if (request.StationId is { } filterStationId)
@@ -61,7 +65,7 @@ internal sealed class ListMachineHandler : IQueryHandler<ListMachineQuery, Paged
                     query = query.Where(x => x.IsActive == filterIsActive);
                 }
 
-                return string.IsNullOrWhiteSpace(request.Search) ? query : query.Where(x => EF.Functions.ILike(x.Name, $"%{request.Search}%") || EF.Functions.ILike(x.MachineType, $"%{request.Search}%") || EF.Functions.ILike((x.PlateOrSerial ?? string.Empty), $"%{request.Search}%"));
+                return searchPattern.Length == 0 ? query : query.Where(x => EF.Functions.ILike(x.Name, searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike(x.MachineType, searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.PlateOrSerial ?? string.Empty), searchPattern, LikePattern.EscapeCharacter));
             },
             cancellationToken);
 

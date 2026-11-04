@@ -60,15 +60,19 @@ internal sealed class ListTrailerHandler : IQueryHandler<ListTrailerQuery, Paged
 {
     private readonly IRepository<Trailer> _repository;
 
+    /// <summary>SortBy beyaz listesi (bkz. docs/ARCH.md §6.2).</summary>
+    private static readonly string[] SortFields = ["OwnerUserId", "Plate", "CarrierId", "CreatedAt", "UpdatedAt"];
+
     public ListTrailerHandler(IRepository<Trailer> repository) => _repository = repository;
 
     public async Task<PagedResult<TrailerDto>> Handle(ListTrailerQuery request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var searchPattern = LikePattern.ContainsOrNull(request.Search) ?? string.Empty;
         var (items, totalCount) = await _repository.ListPagedAsync(
             request.Skip,
             request.PageSize,
-            request.SortBy,
+            SortExpression.Normalize(request.SortBy, SortFields),
             query =>
             {
                 if (request.RestrictToOwnerId is { } ownerId)
@@ -86,7 +90,7 @@ internal sealed class ListTrailerHandler : IQueryHandler<ListTrailerQuery, Paged
                     query = query.Where(x => x.CarrierId == filterCarrierId);
                 }
 
-                return string.IsNullOrWhiteSpace(request.Search) ? query : query.Where(x => EF.Functions.ILike(x.Plate, $"%{request.Search}%"));
+                return searchPattern.Length == 0 ? query : query.Where(x => EF.Functions.ILike(x.Plate, searchPattern, LikePattern.EscapeCharacter));
             },
             cancellationToken);
 

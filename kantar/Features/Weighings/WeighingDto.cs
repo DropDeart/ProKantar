@@ -12,7 +12,7 @@ public sealed class WeighingDto
     /// <summary>Direction.</summary>
     public WeighingDirection Direction { get; set; }
     /// <summary>Status.</summary>
-    public WeighingStatus Status { get; set; }
+    public WeighingStatus Status { get; set; } = WeighingStatus.Open;
     /// <summary>Plate.</summary>
     public string Plate { get; set; } = string.Empty;
     /// <summary>TrailerId.</summary>

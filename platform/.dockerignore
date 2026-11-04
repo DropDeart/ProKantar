@@ -6,3 +6,4 @@ obj/
 .git/
 docs/
 *.user
+.env

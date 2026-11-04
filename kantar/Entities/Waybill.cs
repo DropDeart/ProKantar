@@ -23,7 +23,7 @@ public sealed class Waybill : BaseEntity, ITenantEntity
     /// <summary>EDespatchStatus.</summary>
     public WaybillEDespatchStatus? EDespatchStatus { get; set; }
     /// <summary>ErpSyncStatus.</summary>
-    public WaybillErpSyncStatus ErpSyncStatus { get; set; }
+    public WaybillErpSyncStatus ErpSyncStatus { get; set; } = WaybillErpSyncStatus.Pending;
     /// <summary>ErpDocNo.</summary>
     [MaxLength(50)]
     public string? ErpDocNo { get; set; }

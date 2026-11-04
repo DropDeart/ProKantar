@@ -15,8 +15,6 @@ public sealed class CreateWeighingCommand : ICommand<Guid>
     public string TicketNo { get; set; } = string.Empty;
     /// <summary>Direction.</summary>
     public WeighingDirection Direction { get; set; }
-    /// <summary>Status.</summary>
-    public WeighingStatus Status { get; set; }
     /// <summary>Plate.</summary>
     [MaxLength(15)]
     public string Plate { get; set; } = string.Empty;
@@ -39,25 +37,6 @@ public sealed class CreateWeighingCommand : ICommand<Guid>
     public DateTimeOffset FirstWeighedAt { get; set; }
     /// <summary>FirstIsManual.</summary>
     public bool FirstIsManual { get; set; } = false;
-    /// <summary>SecondWeighbridgeId.</summary>
-    public Guid? SecondWeighbridgeId { get; set; }
-    /// <summary>SecondWeightKg.</summary>
-    public decimal? SecondWeightKg { get; set; }
-    /// <summary>SecondWeighedAt.</summary>
-    public DateTimeOffset? SecondWeighedAt { get; set; }
-    /// <summary>SecondIsManual.</summary>
-    public bool SecondIsManual { get; set; } = false;
-    /// <summary>GrossKg.</summary>
-    public decimal? GrossKg { get; set; }
-    /// <summary>TareKg.</summary>
-    public decimal? TareKg { get; set; }
-    /// <summary>NetKg.</summary>
-    public decimal? NetKg { get; set; }
-    /// <summary>TareSource.</summary>
-    public WeighingTareSource? TareSource { get; set; }
-    /// <summary>CancelReason.</summary>
-    [MaxLength(250)]
-    public string? CancelReason { get; set; }
     /// <summary>Note.</summary>
     public string? Note { get; set; }
     /// <summary>StationId.</summary>
@@ -94,7 +73,6 @@ internal sealed class CreateWeighingHandler : ICommandHandler<CreateWeighingComm
         {
             TicketNo = request.TicketNo,
             Direction = request.Direction,
-            Status = request.Status,
             Plate = request.Plate,
             TrailerId = request.TrailerId,
             TrailerPlate = request.TrailerPlate,
@@ -104,15 +82,6 @@ internal sealed class CreateWeighingHandler : ICommandHandler<CreateWeighingComm
             FirstWeightKg = request.FirstWeightKg,
             FirstWeighedAt = request.FirstWeighedAt,
             FirstIsManual = request.FirstIsManual,
-            SecondWeighbridgeId = request.SecondWeighbridgeId,
-            SecondWeightKg = request.SecondWeightKg,
-            SecondWeighedAt = request.SecondWeighedAt,
-            SecondIsManual = request.SecondIsManual,
-            GrossKg = request.GrossKg,
-            TareKg = request.TareKg,
-            NetKg = request.NetKg,
-            TareSource = request.TareSource,
-            CancelReason = request.CancelReason,
             Note = request.Note,
             StationId = request.StationId,
             WeighbridgeId = request.WeighbridgeId,
@@ -138,8 +107,6 @@ public sealed class UpdateWeighingCommand : ICommand
     public string TicketNo { get; set; } = string.Empty;
     /// <summary>Direction.</summary>
     public WeighingDirection Direction { get; set; }
-    /// <summary>Status.</summary>
-    public WeighingStatus Status { get; set; }
     /// <summary>Plate.</summary>
     [MaxLength(15)]
     public string Plate { get; set; } = string.Empty;
@@ -162,25 +129,6 @@ public sealed class UpdateWeighingCommand : ICommand
     public DateTimeOffset FirstWeighedAt { get; set; }
     /// <summary>FirstIsManual.</summary>
     public bool FirstIsManual { get; set; } = false;
-    /// <summary>SecondWeighbridgeId.</summary>
-    public Guid? SecondWeighbridgeId { get; set; }
-    /// <summary>SecondWeightKg.</summary>
-    public decimal? SecondWeightKg { get; set; }
-    /// <summary>SecondWeighedAt.</summary>
-    public DateTimeOffset? SecondWeighedAt { get; set; }
-    /// <summary>SecondIsManual.</summary>
-    public bool SecondIsManual { get; set; } = false;
-    /// <summary>GrossKg.</summary>
-    public decimal? GrossKg { get; set; }
-    /// <summary>TareKg.</summary>
-    public decimal? TareKg { get; set; }
-    /// <summary>NetKg.</summary>
-    public decimal? NetKg { get; set; }
-    /// <summary>TareSource.</summary>
-    public WeighingTareSource? TareSource { get; set; }
-    /// <summary>CancelReason.</summary>
-    [MaxLength(250)]
-    public string? CancelReason { get; set; }
     /// <summary>Note.</summary>
     public string? Note { get; set; }
     /// <summary>StationId.</summary>
@@ -217,7 +165,6 @@ internal sealed class UpdateWeighingHandler : ICommandHandler<UpdateWeighingComm
             ?? throw new NotFoundException("Weighing", request.Id);
         entity.TicketNo = request.TicketNo;
         entity.Direction = request.Direction;
-        entity.Status = request.Status;
         entity.Plate = request.Plate;
         entity.TrailerId = request.TrailerId;
         entity.TrailerPlate = request.TrailerPlate;
@@ -227,15 +174,6 @@ internal sealed class UpdateWeighingHandler : ICommandHandler<UpdateWeighingComm
         entity.FirstWeightKg = request.FirstWeightKg;
         entity.FirstWeighedAt = request.FirstWeighedAt;
         entity.FirstIsManual = request.FirstIsManual;
-        entity.SecondWeighbridgeId = request.SecondWeighbridgeId;
-        entity.SecondWeightKg = request.SecondWeightKg;
-        entity.SecondWeighedAt = request.SecondWeighedAt;
-        entity.SecondIsManual = request.SecondIsManual;
-        entity.GrossKg = request.GrossKg;
-        entity.TareKg = request.TareKg;
-        entity.NetKg = request.NetKg;
-        entity.TareSource = request.TareSource;
-        entity.CancelReason = request.CancelReason;
         entity.Note = request.Note;
         entity.StationId = request.StationId;
         entity.WeighbridgeId = request.WeighbridgeId;

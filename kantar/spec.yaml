@@ -170,6 +170,10 @@ entities:
     paginated: true
     sortable: true
     searchable: true
+    searchFields:
+    - Name
+    - ShortName
+    - TaxNo
   DeliveryLocation:
     props:
       name:
@@ -308,6 +312,7 @@ entities:
       storedTareAt:
         type: datetime
         nullable: true
+        serverManaged: true
       isBlacklisted:
         type: bool
         default: false
@@ -352,7 +357,9 @@ entities:
         values: [Inbound, Outbound]
       status:
         type: enum
+        default: Open
         values: [Open, Completed, Cancelled]
+        serverManaged: true
       plate:
         type: string
         maxLength: 15
@@ -382,32 +389,41 @@ entities:
       secondWeighbridgeId:
         type: guid
         nullable: true
+        serverManaged: true
       secondWeightKg:
         type: decimal
         nullable: true
+        serverManaged: true
       secondWeighedAt:
         type: datetime
         nullable: true
+        serverManaged: true
       secondIsManual:
         type: bool
         default: false
+        serverManaged: true
       grossKg:
         type: decimal
         nullable: true
+        serverManaged: true
       tareKg:
         type: decimal
         nullable: true
+        serverManaged: true
       netKg:
         type: decimal
         nullable: true
+        serverManaged: true
       tareSource:
         type: enum
         nullable: true
         values: [Measured, Stored]
+        serverManaged: true
       cancelReason:
         type: string
         nullable: true
         maxLength: 250
+        serverManaged: true
       note:
         type: text
         nullable: true
@@ -461,6 +477,11 @@ entities:
     paginated: true
     sortable: true
     searchable: true
+    searchFields:
+    - TicketNo
+    - Plate
+    - TrailerPlate
+    - DriverName
   WeighingPhoto:
     props:
       stage:
@@ -545,23 +566,30 @@ entities:
       eDespatchUuid:
         type: guid
         nullable: true
+        serverManaged: true
       eDespatchStatus:
         type: enum
         nullable: true
         values: [Draft, Sent, Accepted, Rejected]
+        serverManaged: true
       erpSyncStatus:
         type: enum
+        default: Pending
         values: [Pending, Sent, Failed]
+        serverManaged: true
       erpDocNo:
         type: string
         nullable: true
         maxLength: 50
+        serverManaged: true
       erpSyncedAt:
         type: datetime
         nullable: true
+        serverManaged: true
       erpError:
         type: text
         nullable: true
+        serverManaged: true
     relations:
       weighing:
         kind: many-to-one
@@ -605,7 +633,9 @@ entities:
         values: [Inbound, Outbound]
       status:
         type: enum
+        default: Draft
         values: [Draft, Dispatched, InProgress, Completed, Cancelled]
+        serverManaged: true
       plannedAt: datetime
       plate:
         type: string
@@ -620,6 +650,7 @@ entities:
       dispatchedAt:
         type: datetime
         nullable: true
+        serverManaged: true
       note:
         type: text
         nullable: true
@@ -650,6 +681,10 @@ entities:
     paginated: true
     sortable: true
     searchable: true
+    searchFields:
+    - ShipmentNo
+    - Plate
+    - DriverName
   ShipmentStop:
     props:
       sequence: int

@@ -59,6 +59,9 @@ internal sealed class ListDriverVehicleHandler : IQueryHandler<ListDriverVehicle
 {
     private readonly IRepository<DriverVehicle> _repository;
 
+    /// <summary>SortBy beyaz listesi (bkz. docs/ARCH.md §6.2).</summary>
+    private static readonly string[] SortFields = ["UserId", "StartedAt", "EndedAt", "DriverId", "VehicleId", "TrailerId", "CreatedAt", "UpdatedAt"];
+
     public ListDriverVehicleHandler(IRepository<DriverVehicle> repository) => _repository = repository;
 
     public async Task<PagedResult<DriverVehicleDto>> Handle(ListDriverVehicleQuery request, CancellationToken cancellationToken)
@@ -67,7 +70,7 @@ internal sealed class ListDriverVehicleHandler : IQueryHandler<ListDriverVehicle
         var (items, totalCount) = await _repository.ListPagedAsync(
             request.Skip,
             request.PageSize,
-            request.SortBy,
+            SortExpression.Normalize(request.SortBy, SortFields),
             query =>
             {
                 if (request.RestrictToOwnerId is { } ownerId)

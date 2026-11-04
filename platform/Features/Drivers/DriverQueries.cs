@@ -60,15 +60,19 @@ internal sealed class ListDriverHandler : IQueryHandler<ListDriverQuery, PagedRe
 {
     private readonly IRepository<Driver> _repository;
 
+    /// <summary>SortBy beyaz listesi (bkz. docs/ARCH.md §6.2).</summary>
+    private static readonly string[] SortFields = ["UserId", "FullName", "Phone", "NationalId", "LicenseNo", "KvkkConsentAt", "LocationConsent", "IsActive", "CarrierId", "CreatedAt", "UpdatedAt"];
+
     public ListDriverHandler(IRepository<Driver> repository) => _repository = repository;
 
     public async Task<PagedResult<DriverDto>> Handle(ListDriverQuery request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var searchPattern = LikePattern.ContainsOrNull(request.Search) ?? string.Empty;
         var (items, totalCount) = await _repository.ListPagedAsync(
             request.Skip,
             request.PageSize,
-            request.SortBy,
+            SortExpression.Normalize(request.SortBy, SortFields),
             query =>
             {
                 if (request.RestrictToOwnerId is { } ownerId)
@@ -86,7 +90,7 @@ internal sealed class ListDriverHandler : IQueryHandler<ListDriverQuery, PagedRe
                     query = query.Where(x => x.Phone == filterPhone);
                 }
 
-                return string.IsNullOrWhiteSpace(request.Search) ? query : query.Where(x => EF.Functions.ILike(x.FullName, $"%{request.Search}%") || EF.Functions.ILike(x.Phone, $"%{request.Search}%") || EF.Functions.ILike((x.NationalId ?? string.Empty), $"%{request.Search}%") || EF.Functions.ILike((x.LicenseNo ?? string.Empty), $"%{request.Search}%"));
+                return searchPattern.Length == 0 ? query : query.Where(x => EF.Functions.ILike(x.FullName, searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike(x.Phone, searchPattern, LikePattern.EscapeCharacter));
             },
             cancellationToken);
 

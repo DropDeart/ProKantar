@@ -7,6 +7,28 @@
       "postgresPort": 5432,
       "isIdentity": true,
       "protected": false
+    },
+    {
+      "name": "kantar",
+      "restPort": 8083,
+      "grpcPort": 8084,
+      "postgresPort": 5433,
+      "entityCount": 15,
+      "isIdentity": false,
+      "authority": "http://host.docker.internal:8081",
+      "audience": "baseforge-api",
+      "protected": true
+    },
+    {
+      "name": "platform",
+      "restPort": 8085,
+      "grpcPort": 8086,
+      "postgresPort": 5434,
+      "entityCount": 6,
+      "isIdentity": false,
+      "authority": "http://host.docker.internal:8081",
+      "audience": "baseforge-api",
+      "protected": true
     }
   ]
 }

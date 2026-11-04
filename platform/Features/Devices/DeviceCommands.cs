@@ -22,8 +22,6 @@ public sealed class CreateDeviceCommand : ICommand<Guid>
     /// <summary>AppVersion.</summary>
     [MaxLength(20)]
     public string? AppVersion { get; set; }
-    /// <summary>LastSeenAt.</summary>
-    public DateTimeOffset? LastSeenAt { get; set; }
     /// <summary>DriverId.</summary>
     public Guid DriverId { get; set; }
 }
@@ -48,7 +46,6 @@ internal sealed class CreateDeviceHandler : ICommandHandler<CreateDeviceCommand,
             Platform = request.Platform,
             PushToken = request.PushToken,
             AppVersion = request.AppVersion,
-            LastSeenAt = request.LastSeenAt,
             DriverId = request.DriverId,
         };
         await _repository.AddAsync(entity, cancellationToken);
@@ -75,8 +72,6 @@ public sealed class UpdateDeviceCommand : ICommand
     /// <summary>AppVersion.</summary>
     [MaxLength(20)]
     public string? AppVersion { get; set; }
-    /// <summary>LastSeenAt.</summary>
-    public DateTimeOffset? LastSeenAt { get; set; }
     /// <summary>DriverId.</summary>
     public Guid DriverId { get; set; }
 
@@ -113,7 +108,6 @@ internal sealed class UpdateDeviceHandler : ICommandHandler<UpdateDeviceCommand>
         entity.Platform = request.Platform;
         entity.PushToken = request.PushToken;
         entity.AppVersion = request.AppVersion;
-        entity.LastSeenAt = request.LastSeenAt;
         entity.DriverId = request.DriverId;
         await _repository.UpdateAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

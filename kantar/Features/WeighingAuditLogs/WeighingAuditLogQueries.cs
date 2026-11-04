@@ -40,15 +40,19 @@ internal sealed class ListWeighingAuditLogHandler : IQueryHandler<ListWeighingAu
 {
     private readonly IRepository<WeighingAuditLog> _repository;
 
+    /// <summary>SortBy beyaz listesi (bkz. docs/ARCH.md §6.2).</summary>
+    private static readonly string[] SortFields = ["Action", "FieldName", "OldValue", "NewValue", "Reason", "WeighingId", "CreatedAt", "UpdatedAt"];
+
     public ListWeighingAuditLogHandler(IRepository<WeighingAuditLog> repository) => _repository = repository;
 
     public async Task<PagedResult<WeighingAuditLogDto>> Handle(ListWeighingAuditLogQuery request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var searchPattern = LikePattern.ContainsOrNull(request.Search) ?? string.Empty;
         var (items, totalCount) = await _repository.ListPagedAsync(
             request.Skip,
             request.PageSize,
-            request.SortBy,
+            SortExpression.Normalize(request.SortBy, SortFields),
             query =>
             {
                 if (request.WeighingId is { } filterWeighingId)
@@ -61,7 +65,7 @@ internal sealed class ListWeighingAuditLogHandler : IQueryHandler<ListWeighingAu
                     query = query.Where(x => x.Action == filterAction);
                 }
 
-                return string.IsNullOrWhiteSpace(request.Search) ? query : query.Where(x => EF.Functions.ILike((x.FieldName ?? string.Empty), $"%{request.Search}%") || EF.Functions.ILike((x.OldValue ?? string.Empty), $"%{request.Search}%") || EF.Functions.ILike((x.NewValue ?? string.Empty), $"%{request.Search}%") || EF.Functions.ILike((x.Reason ?? string.Empty), $"%{request.Search}%"));
+                return searchPattern.Length == 0 ? query : query.Where(x => EF.Functions.ILike((x.FieldName ?? string.Empty), searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.OldValue ?? string.Empty), searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.NewValue ?? string.Empty), searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.Reason ?? string.Empty), searchPattern, LikePattern.EscapeCharacter));
             },
             cancellationToken);
 

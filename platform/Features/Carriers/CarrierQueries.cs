@@ -57,15 +57,19 @@ internal sealed class ListCarrierHandler : IQueryHandler<ListCarrierQuery, Paged
 {
     private readonly IRepository<Carrier> _repository;
 
+    /// <summary>SortBy beyaz listesi (bkz. docs/ARCH.md §6.2).</summary>
+    private static readonly string[] SortFields = ["OwnerUserId", "Name", "TaxNo", "TaxOffice", "Phone", "Address", "CreatedAt", "UpdatedAt"];
+
     public ListCarrierHandler(IRepository<Carrier> repository) => _repository = repository;
 
     public async Task<PagedResult<CarrierDto>> Handle(ListCarrierQuery request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var searchPattern = LikePattern.ContainsOrNull(request.Search) ?? string.Empty;
         var (items, totalCount) = await _repository.ListPagedAsync(
             request.Skip,
             request.PageSize,
-            request.SortBy,
+            SortExpression.Normalize(request.SortBy, SortFields),
             query =>
             {
                 if (request.RestrictToOwnerId is { } ownerId)
@@ -78,7 +82,7 @@ internal sealed class ListCarrierHandler : IQueryHandler<ListCarrierQuery, Paged
                     query = query.Where(x => x.TaxNo == filterTaxNo);
                 }
 
-                return string.IsNullOrWhiteSpace(request.Search) ? query : query.Where(x => EF.Functions.ILike(x.Name, $"%{request.Search}%") || EF.Functions.ILike((x.TaxNo ?? string.Empty), $"%{request.Search}%") || EF.Functions.ILike((x.TaxOffice ?? string.Empty), $"%{request.Search}%") || EF.Functions.ILike((x.Phone ?? string.Empty), $"%{request.Search}%") || EF.Functions.ILike((x.Address ?? string.Empty), $"%{request.Search}%"));
+                return searchPattern.Length == 0 ? query : query.Where(x => EF.Functions.ILike(x.Name, searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.TaxNo ?? string.Empty), searchPattern, LikePattern.EscapeCharacter));
             },
             cancellationToken);
 

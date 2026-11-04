@@ -35,6 +35,9 @@ entities:
     paginated: true
     sortable: true
     searchable: true
+    searchFields:
+    - Name
+    - TaxNo
   Driver:
     props:
       userId: guid
@@ -80,6 +83,9 @@ entities:
     paginated: true
     sortable: true
     searchable: true
+    searchFields:
+    - FullName
+    - Phone
   Vehicle:
     props:
       ownerUserId: guid
@@ -101,6 +107,7 @@ entities:
       isClaimed:
         type: bool
         default: false
+        serverManaged: true
     relations:
       carrier:
         kind: many-to-one
@@ -121,6 +128,10 @@ entities:
     paginated: true
     sortable: true
     searchable: true
+    searchFields:
+    - Plate
+    - Brand
+    - Model
   Trailer:
     props:
       ownerUserId: guid
@@ -200,6 +211,7 @@ entities:
       lastSeenAt:
         type: datetime
         nullable: true
+        serverManaged: true
     relations:
       driver:
         kind: many-to-one

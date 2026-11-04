@@ -10,7 +10,8 @@ services:
     image: postgres:17-alpine
     environment:
       POSTGRES_USER: baseforge
-      POSTGRES_PASSWORD: change_me
+      # Gerçek değer bu klasördeki .env'de (gitignore'lu, üretici rastgele oluşturur).
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD .env dosyasinda tanimli olmali}
       POSTGRES_DB: prokantar_platform_db
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U baseforge -d prokantar_platform_db"]
@@ -18,7 +19,7 @@ services:
       timeout: 5s
       retries: 5
     ports:
-      - "5434:5432"   # yerelde 'dotnet run' + sadece bu postgres'i container'da çalıştırmak için (appsettings.json ile eşleşir)
+      - "127.0.0.1:5434:5432"   # yalnızca bu makineden (yerel 'dotnet run' için); dış ağa açılmaz
     volumes:
       - platform-pgdata:/var/lib/postgresql/data
 
@@ -26,7 +27,8 @@ services:
     build: .
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=prokantar_platform_db;Username=baseforge;Password=change_me"
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=prokantar_platform_db;Username=baseforge;Password=${POSTGRES_PASSWORD}"
+      Auth__ServiceClient__ClientSecret: ${Auth__ServiceClient__ClientSecret:-}
       # Prod'da: Identity'nin gerçek adresi ve onun Auth__Issuer değeri (yedek issuer — Identity yeniden
       # başlarken oluşabilecek 401'leri önler). Boşsa Program.cs'deki varsayılan/metadata kullanılır.
       # Auth__Authority: "https://identity.ornek.com"

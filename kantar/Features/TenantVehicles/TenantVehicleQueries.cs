@@ -43,15 +43,19 @@ internal sealed class ListTenantVehicleHandler : IQueryHandler<ListTenantVehicle
 {
     private readonly IRepository<TenantVehicle> _repository;
 
+    /// <summary>SortBy beyaz listesi (bkz. docs/ARCH.md §6.2).</summary>
+    private static readonly string[] SortFields = ["StoredTareKg", "StoredTareAt", "IsBlacklisted", "BlacklistReason", "Note", "VehicleTypeId", "VehicleId", "CreatedAt", "UpdatedAt"];
+
     public ListTenantVehicleHandler(IRepository<TenantVehicle> repository) => _repository = repository;
 
     public async Task<PagedResult<TenantVehicleDto>> Handle(ListTenantVehicleQuery request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var searchPattern = LikePattern.ContainsOrNull(request.Search) ?? string.Empty;
         var (items, totalCount) = await _repository.ListPagedAsync(
             request.Skip,
             request.PageSize,
-            request.SortBy,
+            SortExpression.Normalize(request.SortBy, SortFields),
             query =>
             {
                 if (request.VehicleId is { } filterVehicleId)
@@ -69,7 +73,7 @@ internal sealed class ListTenantVehicleHandler : IQueryHandler<ListTenantVehicle
                     query = query.Where(x => x.IsBlacklisted == filterIsBlacklisted);
                 }
 
-                return string.IsNullOrWhiteSpace(request.Search) ? query : query.Where(x => EF.Functions.ILike((x.BlacklistReason ?? string.Empty), $"%{request.Search}%") || EF.Functions.ILike((x.Note ?? string.Empty), $"%{request.Search}%"));
+                return searchPattern.Length == 0 ? query : query.Where(x => EF.Functions.ILike((x.BlacklistReason ?? string.Empty), searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.Note ?? string.Empty), searchPattern, LikePattern.EscapeCharacter));
             },
             cancellationToken);
 

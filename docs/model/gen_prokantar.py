@@ -1,13 +1,15 @@
 # ProKantar ER modeli -> draw.io + BaseForge spec YAML üretici (tek kaynak).
-# Hedef: BaseForge.CodeGen 0.6.2-beta (enum, nullable relation, filterable, access/ownerField).
+# Hedef: BaseForge.CodeGen 0.6.3-beta (enum, nullable relation, filterable, access/ownerField,
+#        serverManaged, searchFields).
 # Kullanım: python gen_prokantar.py <çıktı-klasörü>
 import os, sys
 from xml.sax.saxutils import escape
 
 OUT = sys.argv[1]
 
-def F(name, typ, null=False, ml=None, default=None, note=None, ref=None, values=None):
-    return dict(name=name, type=typ, null=null, ml=ml, default=default, note=note, ref=ref, values=values)
+def F(name, typ, null=False, ml=None, default=None, note=None, ref=None, values=None, sm=False):
+    """sm = serverManaged: CRUD Create/Update'e girmez, yalnız elle yazılan komut değiştirir."""
+    return dict(name=name, type=typ, null=null, ml=ml, default=default, note=note, ref=ref, values=values, sm=sm)
 
 def R(name, kind, target, null=False):
     return (name, kind, target, null)
@@ -28,7 +30,7 @@ platform = dict(
         dict(name="Carrier", owner="ownerUserId",
              access={"list": "authenticated", "getById": "authenticated", "create": [DRV, TADMIN, OP],
                      "update": ["owner"], "delete": [SUPER]},
-             filter=["TaxNo"],
+             filter=["TaxNo"], search=["Name", "TaxNo"],
              fields=[
             F("ownerUserId", "guid", note="ownerField: kaydı açan kullanıcı (sub)"),
             F("name", "string", ml=200),
@@ -40,7 +42,7 @@ platform = dict(
         dict(name="Driver", owner="userId",
              access={"list": ["owner"], "getById": [OP, TADMIN, "owner"], "create": [DRV],
                      "update": ["owner"], "delete": [SUPER]},
-             filter=["CarrierId", "Phone"],
+             filter=["CarrierId", "Phone"], search=["FullName", "Phone"],
              fields=[
             F("userId", "guid", note="ownerField: identity/User (sub) - şoförün hesabı"),
             F("fullName", "string", ml=150),
@@ -54,14 +56,14 @@ platform = dict(
         dict(name="Vehicle", owner="ownerUserId",
              access={"list": "authenticated", "getById": "authenticated", "create": [DRV, OP, TADMIN],
                      "update": ["owner"], "delete": [SUPER]},
-             filter=["Plate", "CarrierId", "IsClaimed"],
+             filter=["Plate", "CarrierId", "IsClaimed"], search=["Plate", "Brand", "Model"],
              fields=[
             F("ownerUserId", "guid", note="ownerField; sahiplenme (claim) = elle yazılacak uç"),
             F("plate", "string", ml=15, note="UNIQUE elle; normalize (boşluksuz, büyük harf)"),
             F("vehicleTypeCode", "string", True, 30),
             F("brand", "string", True, 50),
             F("model", "string", True, 50),
-            F("isClaimed", "bool", default="false", note="operatör açtıysa false; şoför sahiplenince true"),
+            F("isClaimed", "bool", default="false", sm=True, note="operatör açtıysa false; şoför sahiplenince true (claim ucu)"),
         ], rel=[R("carrier", "many-to-one", "Carrier", True)], ext=[]),
         dict(name="Trailer", owner="ownerUserId",
              access={"list": "authenticated", "getById": "authenticated", "create": [DRV, OP, TADMIN],
@@ -91,7 +93,7 @@ platform = dict(
             F("platform", "enum", values=["Android", "Ios"]),
             F("pushToken", "string", True, 500),
             F("appVersion", "string", True, 20),
-            F("lastSeenAt", "datetime", True),
+            F("lastSeenAt", "datetime", True, sm=True, note="tracking ping'i günceller"),
         ], rel=[R("driver", "many-to-one", "Driver")], ext=[]),
     ])
 
@@ -127,7 +129,8 @@ kantar = dict(
             F("isActive", "bool", default="true"),
         ], rel=[R("station", "many-to-one", "Station")], ext=[]),
         dict(name="Company", access=LOOKUP_ACCESS,
-             filter=["IsCustomer", "IsSupplier", "IsCarrier", "IsActive", "TaxNo"], fields=[
+             filter=["IsCustomer", "IsSupplier", "IsCarrier", "IsActive", "TaxNo"],
+             search=["Name", "ShortName", "TaxNo"], fields=[
             F("name", "string", ml=200),
             F("shortName", "string", True, 50),
             F("taxNo", "string", True, 11),
@@ -174,7 +177,7 @@ kantar = dict(
              access={"list": STAFF, "getById": STAFF, "create": STAFF, "update": STAFF, "delete": [TADMIN]},
              filter=["VehicleId", "VehicleTypeId", "IsBlacklisted"], fields=[
             F("storedTareKg", "decimal", True),
-            F("storedTareAt", "datetime", True),
+            F("storedTareAt", "datetime", True, sm=True, note="dara kaydedilince sunucu yazar"),
             F("isBlacklisted", "bool", default="false"),
             F("blacklistReason", "string", True, 250),
             F("note", "text", True),
@@ -184,10 +187,11 @@ kantar = dict(
              access={"list": STAFF, "getById": STAFF, "create": STAFF, "update": STAFF, "delete": [TADMIN]},
              filter=["StationId", "WeighbridgeId", "CompanyId", "MaterialId", "VehicleId", "DriverId",
                      "Status", "Direction", "Plate", "TicketNo"],
+             search=["TicketNo", "Plate", "TrailerPlate", "DriverName"],
              fields=[
             F("ticketNo", "string", ml=30, note="kiracı+istasyon içinde UNIQUE elle"),
             F("direction", "enum", values=["Inbound", "Outbound"], note="Giriş/Alış · Çıkış/Satış"),
-            F("status", "enum", values=["Open", "Completed", "Cancelled"]),
+            F("status", "enum", values=["Open", "Completed", "Cancelled"], default="Open", sm=True, note="CompleteWeighing / iptal komutu"),
             F("plate", "string", ml=15, note="snapshot"),
             F("trailerId", "guid", True, note="platform/Trailer (yalnız ID)"),
             F("trailerPlate", "string", True, 15, note="snapshot"),
@@ -197,15 +201,15 @@ kantar = dict(
             F("firstWeightKg", "decimal"),
             F("firstWeighedAt", "datetime"),
             F("firstIsManual", "bool", default="false"),
-            F("secondWeighbridgeId", "guid", True, note="FK elle (aynı hedefe 2. ilişki)", ref="Weighbridge"),
-            F("secondWeightKg", "decimal", True),
-            F("secondWeighedAt", "datetime", True),
-            F("secondIsManual", "bool", default="false"),
-            F("grossKg", "decimal", True, note="sunucu hesaplar"),
-            F("tareKg", "decimal", True, note="sunucu hesaplar"),
-            F("netKg", "decimal", True, note="sunucu hesaplar"),
-            F("tareSource", "enum", True, values=["Measured", "Stored"]),
-            F("cancelReason", "string", True, 250),
+            F("secondWeighbridgeId", "guid", True, note="FK elle (aynı hedefe 2. ilişki)", ref="Weighbridge", sm=True),
+            F("secondWeightKg", "decimal", True, sm=True),
+            F("secondWeighedAt", "datetime", True, sm=True),
+            F("secondIsManual", "bool", default="false", sm=True),
+            F("grossKg", "decimal", True, sm=True, note="sunucu hesaplar"),
+            F("tareKg", "decimal", True, sm=True, note="sunucu hesaplar"),
+            F("netKg", "decimal", True, sm=True, note="sunucu hesaplar"),
+            F("tareSource", "enum", True, values=["Measured", "Stored"], sm=True),
+            F("cancelReason", "string", True, 250, sm=True),
             F("note", "text", True),
         ], rel=[R("station", "many-to-one", "Station"), R("weighbridge", "many-to-one", "Weighbridge"),
                 R("company", "many-to-one", "Company", True), R("material", "many-to-one", "Material"),
@@ -237,26 +241,27 @@ kantar = dict(
             F("issuedAt", "datetime"),
             F("quantityKg", "decimal", True, note="çoklu teslimde bu irsaliyenin payı; null = tartımın tamamı"),
             F("deliveryAddress", "text", True, note="snapshot"),
-            F("eDespatchUuid", "guid", True),
-            F("eDespatchStatus", "enum", True, values=["Draft", "Sent", "Accepted", "Rejected"]),
-            F("erpSyncStatus", "enum", values=["Pending", "Sent", "Failed"]),
-            F("erpDocNo", "string", True, 50),
-            F("erpSyncedAt", "datetime", True),
-            F("erpError", "text", True),
+            F("eDespatchUuid", "guid", True, sm=True),
+            F("eDespatchStatus", "enum", True, values=["Draft", "Sent", "Accepted", "Rejected"], sm=True),
+            F("erpSyncStatus", "enum", values=["Pending", "Sent", "Failed"], default="Pending", sm=True),
+            F("erpDocNo", "string", True, 50, sm=True),
+            F("erpSyncedAt", "datetime", True, sm=True),
+            F("erpError", "text", True, sm=True),
         ], rel=[R("weighing", "many-to-one", "Weighing"), R("company", "many-to-one", "Company", True),
                 R("deliveryLocation", "many-to-one", "DeliveryLocation", True)], ext=[]),
         dict(name="Shipment",
              access={"list": STAFF, "getById": STAFF, "create": STAFF, "update": STAFF, "delete": [TADMIN]},
-             filter=["StationId", "VehicleId", "DriverId", "Direction", "Status", "Plate"], fields=[
+             filter=["StationId", "VehicleId", "DriverId", "Direction", "Status", "Plate"],
+             search=["ShipmentNo", "Plate", "DriverName"], fields=[
             F("shipmentNo", "string", ml=30),
             F("direction", "enum", values=["Inbound", "Outbound"], note="Inbound = gelen araç randevusu"),
-            F("status", "enum", values=["Draft", "Dispatched", "InProgress", "Completed", "Cancelled"],
+            F("status", "enum", values=["Draft", "Dispatched", "InProgress", "Completed", "Cancelled"], default="Draft", sm=True,
               note="Dispatched'a yalnız elle yazılan DispatchShipment komutu geçirir"),
             F("plannedAt", "datetime"),
             F("plate", "string", ml=15, note="snapshot"),
             F("driverId", "guid", True, note="platform/Driver (yalnız ID)"),
             F("driverName", "string", True, 150, note="snapshot"),
-            F("dispatchedAt", "datetime", True),
+            F("dispatchedAt", "datetime", True, sm=True),
             F("note", "text", True),
         ], rel=[R("station", "many-to-one", "Station")],
            ext=[("vehicle", "platform/Vehicle", "VehicleId")]),
@@ -385,6 +390,7 @@ def entity_lines(svc, e):
         col = "#666666" if f["null"] else "#000000"
         if "geometry" in f["type"]: col = "#9673a6"
         if e.get("owner") == f["name"]: s = "🔑 " + s
+        if f["sm"]: s = "⚙ " + s
         s = f"<font color='{col}'>{escape(s)}</font>"
         if f["note"]: s += f" <i><font color='#999999'>// {escape(f['note'])}</font></i>"
         lines.append(s)
@@ -449,7 +455,7 @@ for a, ae, b, be in CROSS:
 
 lg = ("<b>Lejant</b><br><font color='#b85450'>━ zorunlu FK · ┅ opsiyonel FK (relation nullable) · ⋯ elle FK</font><br>"
       "<font color='#0050ef'>┅ servisler arası yalnız ID (externalRef / guid)</font><br>"
-      "<font color='#666666'>gri alan = nullable (?)</font> · <font color='#9673a6'>mor = PostGIS</font> · 🔑 ownerField<br>"
+      "<font color='#666666'>gri alan = nullable (?)</font> · <font color='#9673a6'>mor = PostGIS</font> · 🔑 ownerField · ⚙ serverManaged<br>"
       "<font color='#d79b00'>⛃ filterable</font> · <font color='#6d8764'>🔒 access (roller / owner)</font><br>"
       "Kesik kenarlı kutu = BaseForge dışında ELLE yazılacak")
 cells.append(f'<mxCell id="{new_id()}" value="{escape(lg)}" style="text;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#ffffff;strokeColor=#999999;fontSize=11;" vertex="1" parent="1"><mxGeometry x="20" y="-140" width="520" height="130" as="geometry"/></mxCell>')
@@ -464,7 +470,7 @@ def yl(v):
     return v if isinstance(v, str) else "[" + ", ".join(v) + "]"
 
 def yaml_prop(f):
-    simple = not f["null"] and f["ml"] is None and f["default"] is None and not f["values"]
+    simple = not f["null"] and f["ml"] is None and f["default"] is None and not f["values"] and not f["sm"]
     if simple:
         v = f["type"]
     else:
@@ -473,9 +479,10 @@ def yaml_prop(f):
         if f["null"]: parts.append("nullable: true")
         if f["ml"]: parts.append(f"maxLength: {f['ml']}")
         if f["default"] is not None: parts.append(f'default: "{f["default"]}"')
+        if f["sm"]: parts.append("serverManaged: true")
         v = "{ " + ", ".join(parts) + " }"
     line = f"      {f['name']}: {v}"
-    if f["note"]: line = line.ljust(78) + f"# {f['note']}"
+    if f["note"]: line = (line + " ").ljust(78) + f"# {f['note']}"
     return line
 
 for svc in (platform, kantar):
@@ -499,6 +506,7 @@ for svc in (platform, kantar):
         if e.get("publishes"): L.append(f"    publishes: [{', '.join(e['publishes'])}]")
         if e.get("owner"): L.append(f"    ownerField: {e['owner'][0].upper() + e['owner'][1:]}")
         if e.get("filter"): L.append(f"    filterable: [{', '.join(e['filter'])}]")
+        if e.get("search"): L.append(f"    searchFields: [{', '.join(e['search'])}]")
         if e.get("access"):
             L.append("    access:")
             for k, v in e["access"].items():

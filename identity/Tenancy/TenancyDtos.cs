@@ -25,6 +25,9 @@ public sealed record TenantDto(
         t.Phone, t.Email, t.KepAddress, t.City, t.District, t.Address, t.ReviewNote);
 }
 
+/// <summary>Platform yöneticisinin başvuru listesi satırı.</summary>
+public sealed record AdminTenantDto(TenantDto Tenant, string? ApplicantEmail, string? ApplicantName, bool DocumentsComplete);
+
 /// <summary>Belge kaydı (dosya içeriği ayrı uçtan).</summary>
 public sealed record TenantDocumentDto(Guid Id, TenantDocumentType Type, string FileName, string ContentType, long Size, DateTimeOffset UploadedAt)
 {

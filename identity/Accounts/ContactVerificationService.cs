@@ -18,6 +18,12 @@ public interface IContactVerificationService
     /// <summary>Kodu doğrular; doğrulanmış telefonun sahibini döner ya da (kayıt açıksa) hesap açar.</summary>
     Task<ApplicationUser> SignInWithPhoneAsync(string phone, string code, string? requestedRole, CancellationToken cancellationToken);
 
+    /// <summary>E-postaya giriş kodu; yalnız kayıtlı hesaba gider, yanıt her durumda aynı (e-posta varlığı sızdırılmaz).</summary>
+    Task<OtpSendResult> SendEmailLoginCodeAsync(string email, CancellationToken cancellationToken);
+
+    /// <summary>E-posta + kod ile giriş; yeni hesap açmaz, kodu doğrulanan e-posta onaylanmış sayılır.</summary>
+    Task<ApplicationUser> SignInWithEmailAsync(string email, string code, CancellationToken cancellationToken);
+
     /// <summary>Hesaba eklenecek telefona kod gönderir.</summary>
     Task<OtpSendResult> SendPhoneCodeAsync(ApplicationUser user, string phone, CancellationToken cancellationToken);
 
@@ -65,6 +71,36 @@ internal sealed class ContactVerificationService(
         user = new ApplicationUser { UserName = normalized, PhoneNumber = normalized, PhoneNumberConfirmed = true };
         EnsureSucceeded(await userManager.CreateAsync(user));
         await RegistrationRoles.AssignAsync(userManager, user, options.Registration, requestedRole);
+        return user;
+    }
+
+    public async Task<OtpSendResult> SendEmailLoginCodeAsync(string email, CancellationToken cancellationToken)
+    {
+        var normalized = ContactNormalizer.Email(email) ?? throw IdentityException.Invalid("E-posta adresi girin.");
+        if (await userManager.FindByEmailAsync(normalized) is null)
+        {
+            return new OtpSendResult(options.Otp.LifetimeSeconds, options.Otp.ResendCooldownSeconds);
+        }
+
+        return await otp.SendAsync(OtpChannel.Email, normalized, OtpPurpose.Login, cancellationToken);
+    }
+
+    public async Task<ApplicationUser> SignInWithEmailAsync(string email, string code, CancellationToken cancellationToken)
+    {
+        var normalized = ContactNormalizer.Email(email) ?? throw IdentityException.Invalid(InvalidCode);
+        if (!await otp.VerifyAsync(OtpChannel.Email, normalized, OtpPurpose.Login, code, cancellationToken))
+        {
+            throw IdentityException.Invalid(InvalidCode);
+        }
+
+        var user = await userManager.FindByEmailAsync(normalized) ?? throw IdentityException.Invalid(InvalidCode);
+        if (!user.EmailConfirmed)
+        {
+            user.EmailConfirmed = true;
+            EnsureSucceeded(await userManager.UpdateAsync(user));
+            await memberships.ClaimInvitationsAsync(user, cancellationToken);
+        }
+
         return user;
     }
 

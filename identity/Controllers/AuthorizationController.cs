@@ -126,18 +126,22 @@ public sealed class AuthorizationController : ControllerBase
         return await SignInUserAsync(user, request.GetScopes());
     }
 
-    /// <summary>Telefon + SMS kodu: doğrulanmış telefonun sahibi ya da (kayıt açıksa) yeni hesap.</summary>
+    /// <summary>Telefon + SMS kodu (doğrulanmış telefonun sahibi ya da kayıt açıksa yeni hesap) veya e-posta + kod (kayıtlı hesap).</summary>
     /// <remarks>Grant yalnız otp.enabled iken kayıtlıdır (Program.cs); kapalıyken OpenIddict reddeder.</remarks>
     private async Task<IActionResult> HandleOtpAsync(OpenIddictRequest request)
     {
         ApplicationUser user;
         try
         {
-            user = await _verification.SignInWithPhoneAsync(
-                (string?)request.GetParameter("phone") ?? string.Empty,
-                (string?)request.GetParameter("code") ?? string.Empty,
-                (string?)request.GetParameter("role"),
-                HttpContext.RequestAborted);
+            var code = (string?)request.GetParameter("code") ?? string.Empty;
+            var email = (string?)request.GetParameter("email");
+            user = !string.IsNullOrWhiteSpace(email)
+                ? await _verification.SignInWithEmailAsync(email, code, HttpContext.RequestAborted)
+                : await _verification.SignInWithPhoneAsync(
+                    (string?)request.GetParameter("phone") ?? string.Empty,
+                    code,
+                    (string?)request.GetParameter("role"),
+                    HttpContext.RequestAborted);
         }
         catch (IdentityException ex)
         {

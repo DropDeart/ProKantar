@@ -26,6 +26,12 @@ public sealed class VerificationApiController(UserManager<ApplicationUser> userM
     public Task<OtpSendResult> SendLoginCode(PhoneRequest request, CancellationToken cancellationToken)
         => verification.SendLoginCodeAsync(request.Phone, cancellationToken);
 
+    /// <summary>E-postayla giriş kodu gönderir (kayıtlı hesaba; yanıt her durumda aynı).</summary>
+    [HttpPost("otp/email/send")]
+    [AllowAnonymous]
+    public Task<OtpSendResult> SendEmailLoginCode(EmailRequest request, CancellationToken cancellationToken)
+        => verification.SendEmailLoginCodeAsync(request.Email, cancellationToken);
+
     /// <summary>Hesaba eklenecek telefona kod gönderir.</summary>
     [HttpPost("phone/send")]
     [Authorize(AuthenticationSchemes = AuthSchemes.CookieOrBearer)]
@@ -59,6 +65,9 @@ public sealed class VerificationApiController(UserManager<ApplicationUser> userM
 
 /// <summary>Telefon.</summary>
 public sealed record PhoneRequest(string Phone);
+
+/// <summary>E-posta.</summary>
+public sealed record EmailRequest(string Email);
 
 /// <summary>Telefon ve kod.</summary>
 public sealed record PhoneCodeRequest(string Phone, string Code);

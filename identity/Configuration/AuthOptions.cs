@@ -157,6 +157,9 @@ public sealed class MultiTenancyOptions
     /// <summary>Şirket belgelerinin gizli klasörü (wwwroot dışında; içerik köküne göreli olabilir).</summary>
     public string DocumentsPath { get; set; } = "data/tenant-documents";
 
+    /// <summary>Web portalının adresi; karar e-postasındaki bağlantı ({PortalUrl}/sirket/{id}).</summary>
+    public string PortalUrl { get; set; } = "http://localhost:3000";
+
     /// <summary>Admin rolü dahil tüm şirket içi roller.</summary>
     public IReadOnlyList<string> AllMemberRoles => [.. MemberRoles.Append(AdminRole).Distinct(StringComparer.Ordinal)];
 }

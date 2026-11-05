@@ -14,8 +14,8 @@ public interface ITenantOnboardingService
     /// <summary>Şirket bilgilerini günceller (şirket yöneticisi ya da platform yöneticisi; askıdayken değil).</summary>
     Task<TenantDto> UpdateAsync(Guid tenantId, TenantActor actor, UpdateTenantRequest request, CancellationToken cancellationToken);
 
-    /// <summary>Şirketler (duruma göre süzülür).</summary>
-    Task<IReadOnlyList<TenantDto>> ListAsync(TenantStatus? status, CancellationToken cancellationToken);
+    /// <summary>Başvurular: başvuran ve zorunlu belge durumu ile (duruma göre süzülür).</summary>
+    Task<IReadOnlyList<AdminTenantDto>> ListAsync(TenantStatus? status, CancellationToken cancellationToken);
 
     /// <summary>Şirket ayrıntısı (yöneticisi ya da platform yöneticisi).</summary>
     Task<TenantDto> GetAsync(Guid tenantId, TenantActor actor, CancellationToken cancellationToken);
@@ -28,7 +28,8 @@ public interface ITenantOnboardingService
 }
 
 /// <inheritdoc cref="ITenantOnboardingService" />
-internal sealed class TenantOnboardingService(IdentityServiceDbContext db, ITenantAdminGuard guard, AuthOptions options, TimeProvider clock)
+internal sealed class TenantOnboardingService(
+    IdentityServiceDbContext db, ITenantAdminGuard guard, ITenantReviewNotifier notifier, AuthOptions options, TimeProvider clock)
     : ITenantOnboardingService
 {
     private readonly MultiTenancyOptions _tenancy = options.MultiTenancy;
@@ -92,12 +93,33 @@ internal sealed class TenantOnboardingService(IdentityServiceDbContext db, ITena
         return TenantDto.From(tenant);
     }
 
-    public async Task<IReadOnlyList<TenantDto>> ListAsync(TenantStatus? status, CancellationToken cancellationToken)
-        => await db.Set<Tenant>().AsNoTracking()
+    public async Task<IReadOnlyList<AdminTenantDto>> ListAsync(TenantStatus? status, CancellationToken cancellationToken)
+    {
+        var tenants = await db.Set<Tenant>().AsNoTracking()
             .Where(t => status == null || t.Status == status)
             .OrderByDescending(t => t.CreatedAt)
-            .Select(t => TenantDto.From(t))
             .ToListAsync(cancellationToken);
+        var ids = tenants.Select(t => t.Id).ToList();
+        var creatorIds = tenants.Select(t => t.CreatedByUserId).Distinct().ToList();
+
+        var uploaded = (await db.Set<TenantDocument>().AsNoTracking()
+                .Where(d => ids.Contains(d.TenantId))
+                .Select(d => new { d.TenantId, d.Type })
+                .Distinct()
+                .ToListAsync(cancellationToken))
+            .ToLookup(d => d.TenantId, d => d.Type);
+        var applicants = await db.Users.AsNoTracking()
+            .Where(u => creatorIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.Email, u.FullName })
+            .ToDictionaryAsync(u => u.Id, cancellationToken);
+
+        return [.. tenants.Select(t =>
+        {
+            applicants.TryGetValue(t.CreatedByUserId, out var applicant);
+            var complete = !TenantDocumentRules.Required.Except(uploaded[t.Id]).Any();
+            return new AdminTenantDto(TenantDto.From(t), applicant?.Email, applicant?.FullName, complete);
+        })];
+    }
 
     public async Task<TenantDto> ReviewAsync(Guid tenantId, TenantStatus target, Guid reviewerId, string? note, CancellationToken cancellationToken)
     {
@@ -107,8 +129,14 @@ internal sealed class TenantOnboardingService(IdentityServiceDbContext db, ITena
             await EnsureRequiredDocumentsAsync(tenantId, cancellationToken);
         }
 
-        tenant.Review(target, reviewerId, note, clock.GetUtcNow());
+        if (target == TenantStatus.Rejected && string.IsNullOrWhiteSpace(note))
+        {
+            throw IdentityException.Invalid("Ret gerekçesi zorunlu; başvuru sahibine gösterilir.");
+        }
+
+        tenant.Review(target, reviewerId, note?.Trim(), clock.GetUtcNow());
         await db.SaveChangesAsync(cancellationToken);
+        await notifier.NotifyAsync(tenant, cancellationToken);
         return TenantDto.From(tenant);
     }
 

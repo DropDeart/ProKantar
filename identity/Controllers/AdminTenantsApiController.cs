@@ -19,7 +19,7 @@ public sealed class AdminTenantsApiController(UserManager<ApplicationUser> userM
 {
     /// <summary>Şirketler (status ile süzülür, örn. ?status=Pending).</summary>
     [HttpGet]
-    public Task<IReadOnlyList<TenantDto>> List([FromQuery] TenantStatus? status, CancellationToken cancellationToken)
+    public Task<IReadOnlyList<AdminTenantDto>> List([FromQuery] TenantStatus? status, CancellationToken cancellationToken)
         => onboarding.ListAsync(status, cancellationToken);
 
     /// <summary>Onaylar.</summary>

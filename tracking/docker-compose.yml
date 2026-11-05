@@ -26,6 +26,7 @@ services:
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=prokantar_tracking_db;Username=baseforge;Password=${POSTGRES_PASSWORD}"
       RabbitMq__Password: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD .env dosyasinda tanimli olmali}
       Auth__ServiceClient__ClientSecret: ${Auth__ServiceClient__ClientSecret:-}
+      Cors__AllowedOrigins__0: ${CORS_ORIGIN:-http://localhost:3000}
     ports:
       - "8087:8080"   # REST
       - "8088:8081"   # gRPC (h2c)

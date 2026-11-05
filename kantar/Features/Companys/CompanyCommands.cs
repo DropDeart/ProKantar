@@ -35,6 +35,15 @@ public sealed class CreateCompanyCommand : ICommand<Guid>
     public string? Email { get; set; }
     /// <summary>Address.</summary>
     public string? Address { get; set; }
+    /// <summary>İl.</summary>
+    [MaxLength(50)]
+    public string? City { get; set; }
+    /// <summary>İlçe.</summary>
+    [MaxLength(50)]
+    public string? District { get; set; }
+    /// <summary>Posta kodu (5 hane).</summary>
+    [MaxLength(5)]
+    public string? PostalCode { get; set; }
     /// <summary>Bağlı ProKantar şirketi (firma rehberinden eklendiyse).</summary>
     public Guid? LinkedTenantId { get; set; }
     /// <summary>IsActive.</summary>
@@ -66,6 +75,9 @@ internal sealed class CreateCompanyHandler : ICommandHandler<CreateCompanyComman
             Phone = request.Phone,
             Email = request.Email,
             Address = request.Address,
+            City = request.City,
+            District = request.District,
+            PostalCode = request.PostalCode,
             LinkedTenantId = request.LinkedTenantId,
             IsActive = request.IsActive,
         };
@@ -106,6 +118,15 @@ public sealed class UpdateCompanyCommand : ICommand
     public string? Email { get; set; }
     /// <summary>Address.</summary>
     public string? Address { get; set; }
+    /// <summary>İl.</summary>
+    [MaxLength(50)]
+    public string? City { get; set; }
+    /// <summary>İlçe.</summary>
+    [MaxLength(50)]
+    public string? District { get; set; }
+    /// <summary>Posta kodu (5 hane).</summary>
+    [MaxLength(5)]
+    public string? PostalCode { get; set; }
     /// <summary>Bağlı ProKantar şirketi (firma rehberinden eklendiyse).</summary>
     public Guid? LinkedTenantId { get; set; }
     /// <summary>IsActive.</summary>
@@ -137,6 +158,9 @@ internal sealed class UpdateCompanyHandler : ICommandHandler<UpdateCompanyComman
         entity.Phone = request.Phone;
         entity.Email = request.Email;
         entity.Address = request.Address;
+        entity.City = request.City;
+        entity.District = request.District;
+        entity.PostalCode = request.PostalCode;
         entity.LinkedTenantId = request.LinkedTenantId;
         entity.IsActive = request.IsActive;
         await _repository.UpdateAsync(entity, cancellationToken);

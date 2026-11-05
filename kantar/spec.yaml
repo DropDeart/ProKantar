@@ -20,6 +20,10 @@ entities:
         type: string
         nullable: true
         maxLength: 50
+      postalCode:
+        type: string
+        nullable: true
+        maxLength: 5
       phone:
         type: string
         nullable: true
@@ -159,6 +163,18 @@ entities:
       address:
         type: text
         nullable: true
+      city:
+        type: string
+        nullable: true
+        maxLength: 50
+      district:
+        type: string
+        nullable: true
+        maxLength: 50
+      postalCode:
+        type: string
+        nullable: true
+        maxLength: 5
       linkedTenantId:
         type: guid
         nullable: true
@@ -201,6 +217,10 @@ entities:
         type: string
         nullable: true
         maxLength: 50
+      postalCode:
+        type: string
+        nullable: true
+        maxLength: 5
       sourceTenantId:
         type: guid
         nullable: true
@@ -597,7 +617,58 @@ entities:
       eDespatchStatus:
         type: enum
         nullable: true
-        values: [Draft, Sent, Accepted, Rejected]
+        values: [Draft, Sent, Accepted, Rejected, AwaitingManualUpload, Delivered, Failed]
+        serverManaged: true
+      eDespatchProviderKind:
+        type: enum
+        nullable: true
+        values: [PaperOnly, ManualXml, ELogo]
+        serverManaged: true
+      eDespatchProviderRef:
+        type: string
+        nullable: true
+        maxLength: 100
+        serverManaged: true
+      eDespatchReceiverAlias:
+        type: string
+        nullable: true
+        maxLength: 200
+        serverManaged: true
+      eDespatchMessage:
+        type: text
+        nullable: true
+        serverManaged: true
+      eDespatchSentAt:
+        type: datetime
+        nullable: true
+        serverManaged: true
+      eDespatchCheckedAt:
+        type: datetime
+        nullable: true
+        serverManaged: true
+      ublXml:
+        type: text
+        nullable: true
+        serverManaged: true
+      driverName:
+        type: string
+        nullable: true
+        maxLength: 150
+        serverManaged: true
+      driverNationalId:
+        type: string
+        nullable: true
+        maxLength: 11
+        serverManaged: true
+      plate:
+        type: string
+        nullable: true
+        maxLength: 15
+        serverManaged: true
+      trailerPlate:
+        type: string
+        nullable: true
+        maxLength: 15
         serverManaged: true
       erpSyncStatus:
         type: enum

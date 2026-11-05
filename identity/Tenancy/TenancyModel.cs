@@ -25,6 +25,7 @@ public static class TenancyModel
             tenant.Property(t => t.KepAddress).HasMaxLength(256);
             tenant.Property(t => t.City).HasMaxLength(60);
             tenant.Property(t => t.District).HasMaxLength(60);
+            tenant.Property(t => t.PostalCode).HasMaxLength(5);
             tenant.Property(t => t.Address).HasMaxLength(500);
             tenant.Property(t => t.Status).HasConversion<string>().HasMaxLength(20);
             tenant.Property(t => t.ReviewNote).HasMaxLength(500);
@@ -88,7 +89,8 @@ public static class TenancyModel
                 ADD COLUMN IF NOT EXISTS "KepAddress" character varying(256) NULL,
                 ADD COLUMN IF NOT EXISTS "City" character varying(60) NULL,
                 ADD COLUMN IF NOT EXISTS "District" character varying(60) NULL,
-                ADD COLUMN IF NOT EXISTS "Address" character varying(500) NULL;
+                ADD COLUMN IF NOT EXISTS "Address" character varying(500) NULL,
+                ADD COLUMN IF NOT EXISTS "PostalCode" character varying(5) NULL;
 
             CREATE TABLE IF NOT EXISTS "TenantDocuments" (
                 "Id" uuid NOT NULL CONSTRAINT "PK_TenantDocuments" PRIMARY KEY,

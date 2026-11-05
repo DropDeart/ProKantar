@@ -31,6 +31,8 @@
 
   <ItemGroup>
     <Protobuf Include="Protos/user.proto" GrpcServices="Server" />
+    <!-- Elle: şirket künyesi (e-İrsaliye gönderen); regen'de koruyun -->
+    <Protobuf Include="Protos/tenant.proto" GrpcServices="Server" />
   </ItemGroup>
 
 </Project>

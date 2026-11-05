@@ -6,7 +6,7 @@ namespace Identity.Tenancy;
 
 /// <summary>Firma rehberinde bulunan, ProKantar'a kayıtlı onaylı şirket (yalnız ticari künye).</summary>
 public sealed record TenantDirectoryDto(
-    Guid Id, string Name, string? TaxNo, string? TaxOffice, string? Phone, string? City, string? District, string? Address);
+    Guid Id, string Name, string? TaxNo, string? TaxOffice, string? Phone, string? City, string? District, string? Address, string? PostalCode);
 
 /// <summary>
 /// Şirket personelinin cari firma eklerken ProKantar'a kayıtlı firmaları bulması. Yalnız onaylı (Active) şirketler,
@@ -48,7 +48,7 @@ internal sealed class TenantDirectory(IdentityServiceDbContext db) : ITenantDire
         return await tenants
             .OrderBy(t => t.Name)
             .Take(MaxResults)
-            .Select(t => new TenantDirectoryDto(t.Id, t.Name, t.TaxNo, t.TaxOffice, t.Phone, t.City, t.District, t.Address))
+            .Select(t => new TenantDirectoryDto(t.Id, t.Name, t.TaxNo, t.TaxOffice, t.Phone, t.City, t.District, t.Address, t.PostalCode))
             .ToListAsync(cancellationToken);
     }
 }

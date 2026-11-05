@@ -17,12 +17,13 @@ public sealed record TenantDto(
     string? City,
     string? District,
     string? Address,
-    string? ReviewNote)
+    string? ReviewNote,
+    string? PostalCode)
 {
     /// <summary>Entity'den.</summary>
     public static TenantDto From(Tenant t) => new(
         t.Id, t.Name, t.Slug, t.TaxNo, t.Status, t.CreatedAt, t.TaxOffice, t.MersisNo, t.TradeRegistryNo,
-        t.Phone, t.Email, t.KepAddress, t.City, t.District, t.Address, t.ReviewNote);
+        t.Phone, t.Email, t.KepAddress, t.City, t.District, t.Address, t.ReviewNote, t.PostalCode);
 }
 
 /// <summary>Platform yöneticisinin başvuru listesi satırı.</summary>
@@ -64,7 +65,8 @@ public sealed record CreateTenantRequest(
     string? KepAddress = null,
     string? City = null,
     string? District = null,
-    string? Address = null) : ITenantProfileInput;
+    string? Address = null,
+    string? PostalCode = null) : ITenantProfileInput;
 
 /// <summary>Şirket bilgisi güncelleme (kod/slug değişmez; katılım bağlantıları bozulmasın).</summary>
 public sealed record UpdateTenantRequest(
@@ -78,7 +80,8 @@ public sealed record UpdateTenantRequest(
     string? KepAddress = null,
     string? City = null,
     string? District = null,
-    string? Address = null) : ITenantProfileInput;
+    string? Address = null,
+    string? PostalCode = null) : ITenantProfileInput;
 
 /// <summary>Katılma isteği (şirket kodu ile).</summary>
 public sealed record JoinTenantRequest(string Slug);

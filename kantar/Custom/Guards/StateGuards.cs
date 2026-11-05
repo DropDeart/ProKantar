@@ -1,4 +1,5 @@
 using BaseForge.Core.Exceptions;
+using Kantar.Custom.Validation;
 using Kantar.Data;
 using Kantar.Entities;
 using Kantar.Features.Companys;
@@ -130,10 +131,10 @@ internal sealed class CreateWeighingAuditLogGuard : IRequestPreProcessor<CreateW
         => throw new ForbiddenException("Denetim kaydı yalnız sistem tarafından yazılır.");
 }
 
-/// <summary>Teslimat noktası: il, ilçe ve açık adres zorunlu; konum geçerli olmalı (varış tespiti için).</summary>
+/// <summary>Teslimat noktası: il, ilçe, posta kodu ve açık adres zorunlu; konum geçerli olmalı (varış tespiti için).</summary>
 internal static class LocationRules
 {
-    public static void Validate(string? address, string? city, string? district, decimal latitude, decimal longitude)
+    public static void Validate(string? address, string? city, string? district, string? postalCode, decimal latitude, decimal longitude)
     {
         if (string.IsNullOrWhiteSpace(city) || string.IsNullOrWhiteSpace(district))
         {
@@ -145,9 +146,31 @@ internal static class LocationRules
             throw new ValidationException("Address", "Açık adresi girin.");
         }
 
+        RequirePostalCode(postalCode);
+
         if (latitude is < -90 or > 90 || longitude is < -180 or > 180 || (latitude == 0 && longitude == 0))
         {
             throw new ValidationException("Latitude", "Konumu haritada işaretleyin.");
+        }
+    }
+
+    /// <summary>Posta kodu zorunlu ve GİB kuralına uygun olmalı (e-İrsaliye teslim adresi).</summary>
+    public static void RequirePostalCode(string? postalCode)
+    {
+        if (string.IsNullOrWhiteSpace(postalCode))
+        {
+            throw new ValidationException("PostalCode", "Posta kodunu girin.");
+        }
+
+        OptionalPostalCode(postalCode);
+    }
+
+    /// <summary>Posta kodu verilmişse GİB kuralına uymalı.</summary>
+    public static void OptionalPostalCode(string? postalCode)
+    {
+        if (!string.IsNullOrEmpty(postalCode) && !PostalCodes.IsValid(postalCode))
+        {
+            throw new ValidationException("PostalCode", PostalCodes.Error);
         }
     }
 }
@@ -156,7 +179,7 @@ internal sealed class CreateDeliveryLocationGuard : IRequestPreProcessor<CreateD
 {
     public Task Process(CreateDeliveryLocationCommand request, CancellationToken cancellationToken)
     {
-        LocationRules.Validate(request.Address, request.City, request.District, request.Latitude, request.Longitude);
+        LocationRules.Validate(request.Address, request.City, request.District, request.PostalCode, request.Latitude, request.Longitude);
         return Task.CompletedTask;
     }
 }
@@ -165,7 +188,7 @@ internal sealed class UpdateDeliveryLocationGuard : IRequestPreProcessor<UpdateD
 {
     public Task Process(UpdateDeliveryLocationCommand request, CancellationToken cancellationToken)
     {
-        LocationRules.Validate(request.Address, request.City, request.District, request.Latitude, request.Longitude);
+        LocationRules.Validate(request.Address, request.City, request.District, request.PostalCode, request.Latitude, request.Longitude);
         return Task.CompletedTask;
     }
 }

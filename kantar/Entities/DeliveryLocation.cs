@@ -18,6 +18,9 @@ public sealed class DeliveryLocation : BaseEntity, ITenantEntity
     /// <summary>İlçe.</summary>
     [MaxLength(50)]
     public string? District { get; set; }
+    /// <summary>Posta kodu (5 hane).</summary>
+    [MaxLength(5)]
+    public string? PostalCode { get; set; }
     /// <summary>Kaynak ProKantar şirketi (nokta o şirketin istasyonundan alındıysa).</summary>
     public Guid? SourceTenantId { get; set; }
     /// <summary>Kaynak istasyon (o şirkette).</summary>

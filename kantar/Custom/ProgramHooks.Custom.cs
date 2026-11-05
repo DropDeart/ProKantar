@@ -1,4 +1,5 @@
 using BaseForge.Infrastructure.Messaging;
+using Kantar.Custom.EDespatch;
 using Kantar.Custom.Shipments;
 using Kantar.Custom.Tracking;
 using Kantar.Data;
@@ -26,6 +27,9 @@ internal static partial class ProgramHooks
         {
             builder.Services.AddTransient(service, implementation);
         }
+
+        // e-İrsaliye altyapısı: sağlayıcılar, kiracı ayarı, şifre koruması (Custom/EDespatch).
+        builder.AddEDespatch();
     }
 
     static partial void ConfigureRabbitMq(RabbitMqOptions mq)
@@ -46,5 +50,8 @@ internal static partial class ProgramHooks
         {
             app.Logger.LogWarning(ex, "Sevkiyat numarası benzersizlik indeksi kurulamadı (çift numara var mı?).");
         }
+
+        // e-İrsaliye ayar/sayaç/anahtar tabloları (CREATE TABLE IF NOT EXISTS).
+        app.EnsureEDespatchSchema();
     }
 }

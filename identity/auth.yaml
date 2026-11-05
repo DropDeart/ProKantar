@@ -18,6 +18,12 @@ clients:
   - client_credentials
   scopes:
   - api
+- clientId: kantar-service
+  public: false
+  grants:
+  - client_credentials
+  scopes:
+  - api
 roles:
 - SuperAdmin
 - TenantAdmin

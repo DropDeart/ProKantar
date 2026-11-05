@@ -62,6 +62,7 @@ public sealed class KantarDbContext : BaseForgeDbContext
         configurationBuilder.Properties<WeighingAuditLogAction>().HaveConversion<string>();
         configurationBuilder.Properties<WaybillWaybillType>().HaveConversion<string>();
         configurationBuilder.Properties<WaybillEDespatchStatus>().HaveConversion<string>();
+        configurationBuilder.Properties<WaybillEDespatchProviderKind>().HaveConversion<string>();
         configurationBuilder.Properties<WaybillErpSyncStatus>().HaveConversion<string>();
         configurationBuilder.Properties<ShipmentDirection>().HaveConversion<string>();
         configurationBuilder.Properties<ShipmentStatus>().HaveConversion<string>();

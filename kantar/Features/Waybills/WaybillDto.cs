@@ -21,6 +21,28 @@ public sealed class WaybillDto
     public Guid? EDespatchUuid { get; set; }
     /// <summary>EDespatchStatus.</summary>
     public WaybillEDespatchStatus? EDespatchStatus { get; set; }
+    /// <summary>EDespatchProviderKind.</summary>
+    public WaybillEDespatchProviderKind? EDespatchProviderKind { get; set; }
+    /// <summary>EDespatchProviderRef.</summary>
+    public string? EDespatchProviderRef { get; set; }
+    /// <summary>EDespatchReceiverAlias.</summary>
+    public string? EDespatchReceiverAlias { get; set; }
+    /// <summary>EDespatchMessage.</summary>
+    public string? EDespatchMessage { get; set; }
+    /// <summary>EDespatchSentAt.</summary>
+    public DateTimeOffset? EDespatchSentAt { get; set; }
+    /// <summary>EDespatchCheckedAt.</summary>
+    public DateTimeOffset? EDespatchCheckedAt { get; set; }
+    /// <summary>UBL XML üretilmiş mi (XML'in kendisi DTO'da taşınmaz; elle).</summary>
+    public bool HasUbl { get; set; }
+    /// <summary>DriverName.</summary>
+    public string? DriverName { get; set; }
+    /// <summary>Maskeli şoför TCKN'si (ilk 3 ve son 2 hane; tam TCKN DTO'da taşınmaz; elle).</summary>
+    public string? DriverNationalIdMasked { get; set; }
+    /// <summary>Plate.</summary>
+    public string? Plate { get; set; }
+    /// <summary>TrailerPlate.</summary>
+    public string? TrailerPlate { get; set; }
     /// <summary>ErpSyncStatus.</summary>
     public WaybillErpSyncStatus ErpSyncStatus { get; set; } = WaybillErpSyncStatus.Pending;
     /// <summary>ErpDocNo.</summary>
@@ -50,6 +72,17 @@ public sealed class WaybillDto
             DeliveryAddress = entity.DeliveryAddress,
             EDespatchUuid = entity.EDespatchUuid,
             EDespatchStatus = entity.EDespatchStatus,
+            EDespatchProviderKind = entity.EDespatchProviderKind,
+            EDespatchProviderRef = entity.EDespatchProviderRef,
+            EDespatchReceiverAlias = entity.EDespatchReceiverAlias,
+            EDespatchMessage = entity.EDespatchMessage,
+            EDespatchSentAt = entity.EDespatchSentAt,
+            EDespatchCheckedAt = entity.EDespatchCheckedAt,
+            HasUbl = !string.IsNullOrEmpty(entity.UblXml),
+            DriverName = entity.DriverName,
+            DriverNationalIdMasked = Kantar.Custom.Validation.NationalIdMask.Mask(entity.DriverNationalId),
+            Plate = entity.Plate,
+            TrailerPlate = entity.TrailerPlate,
             ErpSyncStatus = entity.ErpSyncStatus,
             ErpDocNo = entity.ErpDocNo,
             ErpSyncedAt = entity.ErpSyncedAt,

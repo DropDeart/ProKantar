@@ -17,6 +17,8 @@ public sealed class StationDto
     public string? City { get; set; }
     /// <summary>İlçe.</summary>
     public string? District { get; set; }
+    /// <summary>Posta kodu (5 hane).</summary>
+    public string? PostalCode { get; set; }
     /// <summary>Phone.</summary>
     public string? Phone { get; set; }
     /// <summary>Latitude.</summary>
@@ -40,6 +42,7 @@ public sealed class StationDto
             Address = entity.Address,
             City = entity.City,
             District = entity.District,
+            PostalCode = entity.PostalCode,
             Phone = entity.Phone,
             Latitude = entity.Latitude,
             Longitude = entity.Longitude,

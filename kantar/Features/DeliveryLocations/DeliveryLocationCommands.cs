@@ -20,6 +20,9 @@ public sealed class CreateDeliveryLocationCommand : ICommand<Guid>
     /// <summary>İlçe.</summary>
     [MaxLength(50)]
     public string? District { get; set; }
+    /// <summary>Posta kodu (5 hane).</summary>
+    [MaxLength(5)]
+    public string? PostalCode { get; set; }
     /// <summary>Kaynak ProKantar şirketi (nokta o şirketin istasyonundan alındıysa).</summary>
     public Guid? SourceTenantId { get; set; }
     /// <summary>Kaynak istasyon (o şirkette).</summary>
@@ -61,6 +64,7 @@ internal sealed class CreateDeliveryLocationHandler : ICommandHandler<CreateDeli
             Address = request.Address,
             City = request.City,
             District = request.District,
+            PostalCode = request.PostalCode,
             SourceTenantId = request.SourceTenantId,
             SourceStationId = request.SourceStationId,
             Latitude = request.Latitude,
@@ -93,6 +97,9 @@ public sealed class UpdateDeliveryLocationCommand : ICommand
     /// <summary>İlçe.</summary>
     [MaxLength(50)]
     public string? District { get; set; }
+    /// <summary>Posta kodu (5 hane).</summary>
+    [MaxLength(5)]
+    public string? PostalCode { get; set; }
     /// <summary>Kaynak ProKantar şirketi (nokta o şirketin istasyonundan alındıysa).</summary>
     public Guid? SourceTenantId { get; set; }
     /// <summary>Kaynak istasyon (o şirkette).</summary>
@@ -134,6 +141,7 @@ internal sealed class UpdateDeliveryLocationHandler : ICommandHandler<UpdateDeli
         entity.Address = request.Address;
         entity.City = request.City;
         entity.District = request.District;
+        entity.PostalCode = request.PostalCode;
         entity.SourceTenantId = request.SourceTenantId;
         entity.SourceStationId = request.SourceStationId;
         entity.Latitude = request.Latitude;

@@ -37,6 +37,9 @@
     <Protobuf Include="Protos/shipment.proto" GrpcServices="Server" />
     <Protobuf Include="Protos/shipmentstop.proto" GrpcServices="Server" />
     <Protobuf Include="Protos/vehicle.proto" GrpcServices="Client" />
+    <!-- Elle (e-İrsaliye): şoför TCKN (platform) ve şirket künyesi (identity), servis jetonuyla; regen'de koruyun -->
+    <Protobuf Include="Protos/driver.proto" GrpcServices="Client" />
+    <Protobuf Include="Protos/tenant.proto" GrpcServices="Client" />
   </ItemGroup>
 
 </Project>

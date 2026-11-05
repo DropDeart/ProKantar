@@ -33,6 +33,15 @@ public sealed class Company : BaseEntity, ITenantEntity
     public string? Email { get; set; }
     /// <summary>Address.</summary>
     public string? Address { get; set; }
+    /// <summary>İl.</summary>
+    [MaxLength(50)]
+    public string? City { get; set; }
+    /// <summary>İlçe.</summary>
+    [MaxLength(50)]
+    public string? District { get; set; }
+    /// <summary>Posta kodu (5 hane).</summary>
+    [MaxLength(5)]
+    public string? PostalCode { get; set; }
     /// <summary>Bağlı ProKantar şirketi (firma rehberinden eklendiyse).</summary>
     public Guid? LinkedTenantId { get; set; }
     /// <summary>IsActive.</summary>

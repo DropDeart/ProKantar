@@ -21,6 +21,9 @@ public sealed class Station : BaseEntity, ITenantEntity
     /// <summary>İlçe.</summary>
     [MaxLength(50)]
     public string? District { get; set; }
+    /// <summary>Posta kodu (5 hane).</summary>
+    [MaxLength(5)]
+    public string? PostalCode { get; set; }
     /// <summary>Phone.</summary>
     [MaxLength(20)]
     public string? Phone { get; set; }

@@ -1,10 +1,11 @@
 using System.Net.Mail;
+using System.Text.RegularExpressions;
 using Identity.ErrorHandling;
 
 namespace Identity.Tenancy;
 
 /// <summary>Doğrulanmış firma bilgileri (başvuru ve güncellemede ortak).</summary>
-public sealed record TenantProfile(
+public sealed partial record TenantProfile(
     string TaxNo,
     string TaxOffice,
     string? MersisNo,
@@ -14,7 +15,8 @@ public sealed record TenantProfile(
     string? KepAddress,
     string City,
     string District,
-    string Address)
+    string Address,
+    string PostalCode)
 {
     /// <summary>İstekten doğrular; ilk hatada 400.</summary>
     public static TenantProfile From(ITenantProfileInput input) => new(
@@ -27,7 +29,8 @@ public sealed record TenantProfile(
         Mail(input.KepAddress, "KEP adresi", required: false),
         Required(input.City, "İl", 60),
         Required(input.District, "İlçe", 60),
-        Required(input.Address, "Adres", 500));
+        Required(input.Address, "Adres", 500),
+        PostalCodeOf(input.PostalCode));
 
     private static string Required(string? value, string label, int max)
     {
@@ -66,6 +69,21 @@ public sealed record TenantProfile(
 
         return digits.Length == 10 ? digits : throw IdentityException.Invalid("Firma telefonu 10 haneli olmalı.");
     }
+
+    /// <summary>GİB kuralı: 5 hane, ilk iki hane il plaka kodu (01–81).</summary>
+    private static string PostalCodeOf(string? value)
+    {
+        var text = value?.Trim() ?? string.Empty;
+        if (text.Length == 0)
+        {
+            throw IdentityException.Invalid("Posta kodu zorunlu.");
+        }
+
+        return PostalCodePattern().IsMatch(text) ? text : throw IdentityException.Invalid("Posta kodu 5 haneli olmalı ve il koduyla (01–81) başlamalı.");
+    }
+
+    [GeneratedRegex("^((0[1-9])|([1-7][0-9])|(8[0-1]))[0-9]{3}$")]
+    private static partial Regex PostalCodePattern();
 
     private static string? Mail(string? value, string label, bool required)
     {
@@ -133,4 +151,5 @@ public interface ITenantProfileInput
     string? City { get; }
     string? District { get; }
     string? Address { get; }
+    string? PostalCode { get; }
 }

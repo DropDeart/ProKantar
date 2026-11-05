@@ -28,8 +28,9 @@ public sealed class DriverGrpcService(ISender sender) : DriverService.DriverServ
             UserId = value.UserId.ToString(),
             FullName = value.FullName,
             Phone = value.Phone,
-            // TCKN ve ehliyet no servisler arasında taşınmaz (KVKK; elle, regen'de koruyun).
-            NationalId = string.Empty,
+            // TCKN yalnız servis jetonuyla (bf_svc) okunur, e-İrsaliye şoför bilgisi için gerekir; ehliyet no
+            // servisler arasında taşınmaz (KVKK; elle, regen'de koruyun).
+            NationalId = value.NationalId ?? string.Empty,
             LicenseNo = string.Empty,
             KvkkConsentAt = value.KvkkConsentAt?.ToString("o", CultureInfo.InvariantCulture) ?? string.Empty,
             LocationConsent = value.LocationConsent,

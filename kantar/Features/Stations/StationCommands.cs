@@ -23,6 +23,9 @@ public sealed class CreateStationCommand : ICommand<Guid>
     /// <summary>İlçe.</summary>
     [MaxLength(50)]
     public string? District { get; set; }
+    /// <summary>Posta kodu (5 hane).</summary>
+    [MaxLength(5)]
+    public string? PostalCode { get; set; }
     /// <summary>Phone.</summary>
     [MaxLength(20)]
     public string? Phone { get; set; }
@@ -56,6 +59,7 @@ internal sealed class CreateStationHandler : ICommandHandler<CreateStationComman
             Address = request.Address,
             City = request.City,
             District = request.District,
+            PostalCode = request.PostalCode,
             Phone = request.Phone,
             Latitude = request.Latitude,
             Longitude = request.Longitude,
@@ -87,6 +91,9 @@ public sealed class UpdateStationCommand : ICommand
     /// <summary>İlçe.</summary>
     [MaxLength(50)]
     public string? District { get; set; }
+    /// <summary>Posta kodu (5 hane).</summary>
+    [MaxLength(5)]
+    public string? PostalCode { get; set; }
     /// <summary>Phone.</summary>
     [MaxLength(20)]
     public string? Phone { get; set; }
@@ -120,6 +127,7 @@ internal sealed class UpdateStationHandler : ICommandHandler<UpdateStationComman
         entity.Address = request.Address;
         entity.City = request.City;
         entity.District = request.District;
+        entity.PostalCode = request.PostalCode;
         entity.Phone = request.Phone;
         entity.Latitude = request.Latitude;
         entity.Longitude = request.Longitude;

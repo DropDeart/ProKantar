@@ -41,6 +41,9 @@ public sealed class Tenant
     /// <summary>İlçe.</summary>
     public string? District { get; set; }
 
+    /// <summary>Posta kodu (5 hane; e-İrsaliye adresi).</summary>
+    public string? PostalCode { get; set; }
+
     /// <summary>Açık adres.</summary>
     public string? Address { get; set; }
 
@@ -74,6 +77,7 @@ public sealed class Tenant
         KepAddress = profile.KepAddress;
         City = profile.City;
         District = profile.District;
+        PostalCode = profile.PostalCode;
         Address = profile.Address;
     }
 

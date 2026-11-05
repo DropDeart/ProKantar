@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+option csharp_namespace = "Identity.Grpc";
+
+package identity;
+
+// Şirketin (kiracı) ticari künyesine diğer servislerin salt-okunur gRPC erişimi (elle; BaseForge üretmez).
+// Yalnız servis jetonuyla (bf_svc) çağrılır; kantar e-İrsaliye gönderen bilgisini buradan alır.
+service TenantService {
+  rpc GetById (TenantByIdRequest) returns (TenantMessage);
+}
+
+message TenantByIdRequest {
+  string id = 1;
+}
+
+message TenantMessage {
+  string id = 1;
+  string name = 2;
+  string tax_no = 3;
+  string tax_office = 4;
+  string phone = 5;
+  string email = 6;
+  string city = 7;
+  string district = 8;
+  string postal_code = 9;
+  string address = 10;
+  string status = 11;
+}

@@ -18,4 +18,10 @@ public enum WaybillEDespatchStatus
     Accepted,
     /// <summary>Rejected.</summary>
     Rejected,
+    /// <summary>AwaitingManualUpload.</summary>
+    AwaitingManualUpload,
+    /// <summary>Delivered.</summary>
+    Delivered,
+    /// <summary>Failed.</summary>
+    Failed,
 }

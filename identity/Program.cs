@@ -229,6 +229,10 @@ app.MapControllers();
 app.MapGrpcService<Identity.Grpc.UserGrpcService>().RequireAuthorization(policy => policy
     .AddAuthenticationSchemes(OpenIddict.Validation.AspNetCore.OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)
     .RequireClaim("bf_svc", "1"));
+// Şirket künyesi (e-İrsaliye gönderen) yalnız servis token'ıyla okunur (elle; BaseForge regen'de yeniden ekleyin).
+app.MapGrpcService<Identity.Grpc.TenantGrpcService>().RequireAuthorization(policy => policy
+    .AddAuthenticationSchemes(OpenIddict.Validation.AspNetCore.OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)
+    .RequireClaim("bf_svc", "1"));
 app.MapHealthChecks("/health", new HealthCheckOptions { ResponseWriter = WriteHealthReportAsync });
 
 // Ortak Giriş SPA'sı (Login/Register/Admin) wwwroot'a gömülü — client-side route'lar (örn. /Account/Login)

@@ -22,6 +22,34 @@ public sealed class Waybill : BaseEntity, ITenantEntity
     public Guid? EDespatchUuid { get; set; }
     /// <summary>EDespatchStatus.</summary>
     public WaybillEDespatchStatus? EDespatchStatus { get; set; }
+    /// <summary>EDespatchProviderKind.</summary>
+    public WaybillEDespatchProviderKind? EDespatchProviderKind { get; set; }
+    /// <summary>EDespatchProviderRef.</summary>
+    [MaxLength(100)]
+    public string? EDespatchProviderRef { get; set; }
+    /// <summary>EDespatchReceiverAlias.</summary>
+    [MaxLength(200)]
+    public string? EDespatchReceiverAlias { get; set; }
+    /// <summary>EDespatchMessage.</summary>
+    public string? EDespatchMessage { get; set; }
+    /// <summary>EDespatchSentAt.</summary>
+    public DateTimeOffset? EDespatchSentAt { get; set; }
+    /// <summary>EDespatchCheckedAt.</summary>
+    public DateTimeOffset? EDespatchCheckedAt { get; set; }
+    /// <summary>UblXml.</summary>
+    public string? UblXml { get; set; }
+    /// <summary>DriverName.</summary>
+    [MaxLength(150)]
+    public string? DriverName { get; set; }
+    /// <summary>DriverNationalId.</summary>
+    [MaxLength(11)]
+    public string? DriverNationalId { get; set; }
+    /// <summary>Plate.</summary>
+    [MaxLength(15)]
+    public string? Plate { get; set; }
+    /// <summary>TrailerPlate.</summary>
+    [MaxLength(15)]
+    public string? TrailerPlate { get; set; }
     /// <summary>ErpSyncStatus.</summary>
     public WaybillErpSyncStatus ErpSyncStatus { get; set; } = WaybillErpSyncStatus.Pending;
     /// <summary>ErpDocNo.</summary>

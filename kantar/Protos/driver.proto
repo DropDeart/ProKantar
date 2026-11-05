@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+option csharp_namespace = "Platform.Grpc";
+
+package platform;
+
+// BaseForge.CodeGen tarafından üretildi — Driver entity'sine diğer servislerin
+// salt-okunur gRPC erişimi. Servis adı (DriverService), C# implementasyon sınıfıyla
+// (DriverGrpcService) çakışmasın diye ayrı tutulur.
+service DriverService {
+  rpc GetById (DriverByIdRequest) returns (DriverMessage);
+}
+
+message DriverByIdRequest {
+  string id = 1;
+}
+
+message DriverMessage {
+  string id = 1;
+  string user_id = 2;
+  string full_name = 3;
+  string phone = 4;
+  string national_id = 5;
+  string license_no = 6;
+  string kvkk_consent_at = 7;
+  bool location_consent = 8;
+  bool is_active = 9;
+}

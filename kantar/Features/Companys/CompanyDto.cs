@@ -27,6 +27,12 @@ public sealed class CompanyDto
     public string? Email { get; set; }
     /// <summary>Address.</summary>
     public string? Address { get; set; }
+    /// <summary>İl.</summary>
+    public string? City { get; set; }
+    /// <summary>İlçe.</summary>
+    public string? District { get; set; }
+    /// <summary>Posta kodu (5 hane).</summary>
+    public string? PostalCode { get; set; }
     /// <summary>Bağlı ProKantar şirketi (firma rehberinden eklendiyse).</summary>
     public Guid? LinkedTenantId { get; set; }
     /// <summary>IsActive.</summary>
@@ -49,6 +55,9 @@ public sealed class CompanyDto
             Phone = entity.Phone,
             Email = entity.Email,
             Address = entity.Address,
+            City = entity.City,
+            District = entity.District,
+            PostalCode = entity.PostalCode,
             LinkedTenantId = entity.LinkedTenantId,
             IsActive = entity.IsActive,
         };

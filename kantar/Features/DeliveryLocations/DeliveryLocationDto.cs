@@ -15,6 +15,8 @@ public sealed class DeliveryLocationDto
     public string? City { get; set; }
     /// <summary>İlçe.</summary>
     public string? District { get; set; }
+    /// <summary>Posta kodu (5 hane).</summary>
+    public string? PostalCode { get; set; }
     /// <summary>Kaynak ProKantar şirketi (nokta o şirketin istasyonundan alındıysa).</summary>
     public Guid? SourceTenantId { get; set; }
     /// <summary>Kaynak istasyon (o şirkette).</summary>
@@ -45,6 +47,7 @@ public sealed class DeliveryLocationDto
             Address = entity.Address,
             City = entity.City,
             District = entity.District,
+            PostalCode = entity.PostalCode,
             SourceTenantId = entity.SourceTenantId,
             SourceStationId = entity.SourceStationId,
             Latitude = entity.Latitude,

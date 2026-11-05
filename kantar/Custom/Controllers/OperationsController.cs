@@ -1,6 +1,7 @@
 using BaseForge.Core.CQRS;
 using BaseForge.API.Controllers;
 using Kantar.Custom.Dashboard;
+using Kantar.Custom.Directory;
 using Kantar.Custom.Shipments;
 using Kantar.Custom.Weighings;
 using Microsoft.AspNetCore.Authorization;
@@ -20,6 +21,16 @@ public sealed class OperationsController : BaseController
     [HttpGet("Dashboard/summary")]
     public async Task<ActionResult<DashboardSummaryDto>> DashboardSummary(CancellationToken cancellationToken)
         => Ok(await Mediator.Send(new DashboardSummaryQuery(), cancellationToken));
+
+    /// <summary>Son sevkiyatlarda kullanılan teslimat noktaları (hızlı seçim).</summary>
+    [HttpGet("DeliveryLocations/recent")]
+    public async Task<ActionResult<IReadOnlyList<RecentDeliveryLocationDto>>> RecentDeliveryLocations(CancellationToken cancellationToken)
+        => Ok(await Mediator.Send(new RecentDeliveryLocationsQuery(), cancellationToken));
+
+    /// <summary>Bağlı cari firmanın (ProKantar şirketi) teslimat noktası olarak seçilebilecek istasyonları.</summary>
+    [HttpGet("Companys/{id:guid}/partner-stations")]
+    public async Task<ActionResult<IReadOnlyList<PartnerStationDto>>> PartnerStations(Guid id, CancellationToken cancellationToken)
+        => Ok(await Mediator.Send(new PartnerStationsQuery { CompanyId = id }, cancellationToken));
 
     /// <summary>Sevkiyat listesi (güzergah özetiyle).</summary>
     [HttpGet("Shipments/board")]
@@ -53,6 +64,24 @@ public sealed class OperationsController : BaseController
         return NoContent();
     }
 
+    /// <summary>Taslak ya da yayınlanmış sevkiyatı gerekçeyle iptal eder; yayındaysa sefer kapanır.</summary>
+    [HttpPost("Shipments/{id:guid}/cancel")]
+    public async Task<IActionResult> CancelShipment(Guid id, CancelRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        await Mediator.Send(new CancelShipmentCommand { Id = id, Reason = request.Reason }, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>Açık tartımı gerekçeyle iptal eder.</summary>
+    [HttpPost("Weighings/{id:guid}/cancel")]
+    public async Task<IActionResult> CancelWeighing(Guid id, CancelRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        await Mediator.Send(new CancelWeighingCommand { Id = id, Reason = request.Reason }, cancellationToken);
+        return NoContent();
+    }
+
     /// <summary>Açık tartımı tamamlar (brüt/dara/net sunucuda hesaplanır).</summary>
     [HttpPost("Weighings/{id:guid}/complete")]
     public async Task<IActionResult> CompleteWeighing(Guid id, CompleteWeighingCommand command, CancellationToken cancellationToken)
@@ -63,3 +92,6 @@ public sealed class OperationsController : BaseController
         return NoContent();
     }
 }
+
+/// <summary>İptal isteği gövdesi.</summary>
+public sealed record CancelRequest(string? Reason);

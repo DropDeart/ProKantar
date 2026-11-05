@@ -27,6 +27,8 @@ public sealed class CompanyDto
     public string? Email { get; set; }
     /// <summary>Address.</summary>
     public string? Address { get; set; }
+    /// <summary>Bağlı ProKantar şirketi (firma rehberinden eklendiyse).</summary>
+    public Guid? LinkedTenantId { get; set; }
     /// <summary>IsActive.</summary>
     public bool IsActive { get; set; } = true;
 
@@ -47,6 +49,7 @@ public sealed class CompanyDto
             Phone = entity.Phone,
             Email = entity.Email,
             Address = entity.Address,
+            LinkedTenantId = entity.LinkedTenantId,
             IsActive = entity.IsActive,
         };
     }

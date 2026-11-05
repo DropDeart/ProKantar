@@ -234,7 +234,10 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-app.MapGrpcService<Identity.Grpc.UserGrpcService>();
+// Kullanıcı bilgisi yalnız servis token'ıyla (client_credentials, bf_svc) okunur.
+app.MapGrpcService<Identity.Grpc.UserGrpcService>().RequireAuthorization(policy => policy
+    .AddAuthenticationSchemes(OpenIddict.Validation.AspNetCore.OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)
+    .RequireClaim("bf_svc", "1"));
 app.MapHealthChecks("/health", new HealthCheckOptions { ResponseWriter = WriteHealthReportAsync });
 
 // Ortak Giriş SPA'sı (Login/Register/Admin) wwwroot'a gömülü — client-side route'lar (örn. /Account/Login)

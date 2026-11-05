@@ -17,6 +17,12 @@ public sealed class CreateStationCommand : ICommand<Guid>
     public string Code { get; set; } = string.Empty;
     /// <summary>Address.</summary>
     public string? Address { get; set; }
+    /// <summary>İl.</summary>
+    [MaxLength(50)]
+    public string? City { get; set; }
+    /// <summary>İlçe.</summary>
+    [MaxLength(50)]
+    public string? District { get; set; }
     /// <summary>Phone.</summary>
     [MaxLength(20)]
     public string? Phone { get; set; }
@@ -48,6 +54,8 @@ internal sealed class CreateStationHandler : ICommandHandler<CreateStationComman
             Name = request.Name,
             Code = request.Code,
             Address = request.Address,
+            City = request.City,
+            District = request.District,
             Phone = request.Phone,
             Latitude = request.Latitude,
             Longitude = request.Longitude,
@@ -73,6 +81,12 @@ public sealed class UpdateStationCommand : ICommand
     public string Code { get; set; } = string.Empty;
     /// <summary>Address.</summary>
     public string? Address { get; set; }
+    /// <summary>İl.</summary>
+    [MaxLength(50)]
+    public string? City { get; set; }
+    /// <summary>İlçe.</summary>
+    [MaxLength(50)]
+    public string? District { get; set; }
     /// <summary>Phone.</summary>
     [MaxLength(20)]
     public string? Phone { get; set; }
@@ -104,6 +118,8 @@ internal sealed class UpdateStationHandler : ICommandHandler<UpdateStationComman
         entity.Name = request.Name;
         entity.Code = request.Code;
         entity.Address = request.Address;
+        entity.City = request.City;
+        entity.District = request.District;
         entity.Phone = request.Phone;
         entity.Latitude = request.Latitude;
         entity.Longitude = request.Longitude;

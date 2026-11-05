@@ -71,7 +71,7 @@ entities:
         nullable: true
     access:
       list: [owner]
-      getById: [Operator, TenantAdmin, owner]
+      getById: [owner]
       create: [Driver]
       update: [owner]
       delete: [SuperAdmin]
@@ -178,8 +178,8 @@ entities:
         target: Trailer
         nullable: true
     access:
-      list: [Operator, TenantAdmin, owner]
-      getById: [Operator, TenantAdmin, owner]
+      list: [owner]
+      getById: [owner]
       create: [Driver]
       update: [owner]
       delete: [owner]

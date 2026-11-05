@@ -19,7 +19,7 @@ public sealed class DriverVehiclesController : BaseController
         var query = new GetDriverVehicleByIdQuery
         {
             Id = id,
-            RestrictToOwnerId = OwnerRestriction("Operator", "TenantAdmin", "SuperAdmin"),
+            RestrictToOwnerId = OwnerRestriction("SuperAdmin"),
         };
         var result = await Mediator.Send(query, cancellationToken);
         return result is null ? NotFound() : Ok(result);
@@ -30,7 +30,7 @@ public sealed class DriverVehiclesController : BaseController
     public async Task<ActionResult<PagedResult<DriverVehicleDto>>> List([FromQuery] ListDriverVehicleQuery query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
-        query.RestrictToOwnerId = OwnerRestriction("Operator", "TenantAdmin", "SuperAdmin");
+        query.RestrictToOwnerId = OwnerRestriction("SuperAdmin");
         return Ok(await Mediator.Send(query, cancellationToken));
     }
 

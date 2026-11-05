@@ -12,6 +12,14 @@ entities:
       address:
         type: text
         nullable: true
+      city:
+        type: string
+        nullable: true
+        maxLength: 50
+      district:
+        type: string
+        nullable: true
+        maxLength: 50
       phone:
         type: string
         nullable: true
@@ -151,6 +159,9 @@ entities:
       address:
         type: text
         nullable: true
+      linkedTenantId:
+        type: guid
+        nullable: true
       isActive:
         type: bool
         default: true
@@ -181,6 +192,20 @@ entities:
         maxLength: 150
       address:
         type: text
+        nullable: true
+      city:
+        type: string
+        nullable: true
+        maxLength: 50
+      district:
+        type: string
+        nullable: true
+        maxLength: 50
+      sourceTenantId:
+        type: guid
+        nullable: true
+      sourceStationId:
+        type: guid
         nullable: true
       latitude: decimal
       longitude: decimal
@@ -652,6 +677,11 @@ entities:
       dispatchedAt:
         type: datetime
         nullable: true
+        serverManaged: true
+      cancelReason:
+        type: string
+        nullable: true
+        maxLength: 250
         serverManaged: true
       note:
         type: text

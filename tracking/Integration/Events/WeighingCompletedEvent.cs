@@ -17,6 +17,9 @@ public sealed class WeighingCompletedEvent : IIntegrationEvent
     /// <inheritdoc />
     public string EventType => Type;
 
+    /// <summary>Kiracı.</summary>
+    public Guid TenantId { get; init; }
+
     /// <summary>Tartım.</summary>
     public Guid WeighingId { get; init; }
 

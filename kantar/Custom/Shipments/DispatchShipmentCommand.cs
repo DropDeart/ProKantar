@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Kantar.Custom.Shipments;
 
-/// <summary>Taslak (veya yeniden yayınlanacak) sevkiyat planını yayınlar; tracking seferi açar.</summary>
+/// <summary>Taslak sevkiyat planını yayınlar; tracking seferi açar.</summary>
 public sealed class DispatchShipmentCommand : ICommand
 {
     /// <summary>Sevkiyat kimliği.</summary>

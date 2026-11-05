@@ -23,9 +23,10 @@ internal static class ShipmentDispatch
         Shipment shipment, IReadOnlyCollection<ShipmentStop> stops, Guid tenantId,
         IEventBus eventBus, CancellationToken cancellationToken)
     {
-        if (shipment.Status is not (ShipmentStatus.Draft or ShipmentStatus.Dispatched))
+        // Yayından sonra plan değişmediğinden (durum kuralları) yeniden yayın gerekmez; tekrar yayın reddedilir.
+        if (shipment.Status != ShipmentStatus.Draft)
         {
-            throw new ValidationException(nameof(Shipment.Status), $"'{shipment.Status}' durumundaki sevkiyat yayınlanamaz.");
+            throw new ValidationException(nameof(Shipment.Status), "Yalnızca taslak sevkiyat yayınlanabilir.");
         }
 
         if (shipment.DriverId is not { } driverId)

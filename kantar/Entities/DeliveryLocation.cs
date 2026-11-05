@@ -12,6 +12,16 @@ public sealed class DeliveryLocation : BaseEntity, ITenantEntity
     public string Name { get; set; } = string.Empty;
     /// <summary>Address.</summary>
     public string? Address { get; set; }
+    /// <summary>İl.</summary>
+    [MaxLength(50)]
+    public string? City { get; set; }
+    /// <summary>İlçe.</summary>
+    [MaxLength(50)]
+    public string? District { get; set; }
+    /// <summary>Kaynak ProKantar şirketi (nokta o şirketin istasyonundan alındıysa).</summary>
+    public Guid? SourceTenantId { get; set; }
+    /// <summary>Kaynak istasyon (o şirkette).</summary>
+    public Guid? SourceStationId { get; set; }
     /// <summary>Latitude.</summary>
     public decimal Latitude { get; set; }
     /// <summary>Longitude.</summary>

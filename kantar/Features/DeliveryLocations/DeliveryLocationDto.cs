@@ -11,6 +11,14 @@ public sealed class DeliveryLocationDto
     public string Name { get; set; } = string.Empty;
     /// <summary>Address.</summary>
     public string? Address { get; set; }
+    /// <summary>İl.</summary>
+    public string? City { get; set; }
+    /// <summary>İlçe.</summary>
+    public string? District { get; set; }
+    /// <summary>Kaynak ProKantar şirketi (nokta o şirketin istasyonundan alındıysa).</summary>
+    public Guid? SourceTenantId { get; set; }
+    /// <summary>Kaynak istasyon (o şirkette).</summary>
+    public Guid? SourceStationId { get; set; }
     /// <summary>Latitude.</summary>
     public decimal Latitude { get; set; }
     /// <summary>Longitude.</summary>
@@ -35,6 +43,10 @@ public sealed class DeliveryLocationDto
             Id = entity.Id,
             Name = entity.Name,
             Address = entity.Address,
+            City = entity.City,
+            District = entity.District,
+            SourceTenantId = entity.SourceTenantId,
+            SourceStationId = entity.SourceStationId,
             Latitude = entity.Latitude,
             Longitude = entity.Longitude,
             RadiusM = entity.RadiusM,

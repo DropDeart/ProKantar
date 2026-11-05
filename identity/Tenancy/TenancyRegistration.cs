@@ -23,6 +23,7 @@ public static class TenancyRegistration
         services.AddScoped<ITenantDocumentService, TenantDocumentService>();
         services.AddScoped<ITenantReviewNotifier, TenantReviewNotifier>();
         services.AddScoped<IMembershipService, MembershipService>();
+        services.AddScoped<ITenantDirectory, TenantDirectory>();
         services.AddScoped<IMemberAdministrationService, MemberAdministrationService>();
         services.AddScoped<ITenantTokenResolver, TenantTokenResolver>();
 

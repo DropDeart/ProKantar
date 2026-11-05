@@ -73,6 +73,19 @@ public sealed class Trip : BaseEntity
         StartedAt = at;
     }
 
+    /// <summary>Açık seferi iptal eder; iptal ettiyse true.</summary>
+    public bool Cancel(DateTimeOffset at)
+    {
+        if (!IsOpen)
+        {
+            return false;
+        }
+
+        Status = TripStatus.Cancelled;
+        EndedAt = at;
+        return true;
+    }
+
     /// <summary>Tüm duraklar bittiyse seferi kapatır; kapattıysa true.</summary>
     public bool CompleteIfAllStopsDone(DateTimeOffset at)
     {

@@ -25,16 +25,23 @@ internal sealed class ConfirmWeighbridgeOnWeighingCompleted(
         // Plansız çıkışta sevkiyat tartımdan sonra açılır; sefer henüz yoksa kantar durağı GPS ile kapanır.
         var trip = await db.Trips
             .Include(t => t.Stops)
-            .FirstOrDefaultAsync(t => t.Id == tripId, cancellationToken);
-        var stop = trip?.Stops
-            .Where(s => s.StopType == StopType.Weighbridge && s.Status != StopStatus.Skipped && s.ConfirmedAt is null)
-            .MinBy(s => s.Sequence);
-        if (trip is not { IsOpen: true } || stop is null)
+            .FirstOrDefaultAsync(t => t.Id == tripId && t.TenantId == notification.TenantId, cancellationToken);
+
+        // Olay yeniden teslim edildiyse (inbox kaydından önce çökme) aynı tartım ikinci durağı kapatmasın.
+        if (trip is null || trip.Stops.Any(s => s.ConfirmedByWeighingId == notification.WeighingId))
         {
             return;
         }
 
-        stop.Confirm(notification.CompletedAt);
+        var stop = trip.Stops
+            .Where(s => s.StopType == StopType.Weighbridge && s.Status != StopStatus.Skipped && s.ConfirmedAt is null)
+            .MinBy(s => s.Sequence);
+        if (!trip.IsOpen || stop is null)
+        {
+            return;
+        }
+
+        stop.ConfirmByWeighing(notification.WeighingId, notification.CompletedAt);
 
         await unitOfWork.BeginTransactionAsync(cancellationToken);
         await tripCloser.CloseIfDoneAsync(trip, notification.CompletedAt, cancellationToken);

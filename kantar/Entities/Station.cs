@@ -15,6 +15,12 @@ public sealed class Station : BaseEntity, ITenantEntity
     public string Code { get; set; } = string.Empty;
     /// <summary>Address.</summary>
     public string? Address { get; set; }
+    /// <summary>İl.</summary>
+    [MaxLength(50)]
+    public string? City { get; set; }
+    /// <summary>İlçe.</summary>
+    [MaxLength(50)]
+    public string? District { get; set; }
     /// <summary>Phone.</summary>
     [MaxLength(20)]
     public string? Phone { get; set; }

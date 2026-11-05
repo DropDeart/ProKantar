@@ -81,6 +81,7 @@ builder.Services.AddBaseForge(options =>
         mq.Password = builder.Configuration["RabbitMq:Password"] ?? "guest";
         mq.Subscribe<ShipmentDispatchedEvent>(ShipmentDispatchedEvent.Type, "tracking.SyncTripOnShipmentDispatched");
         mq.Subscribe<WeighingCompletedEvent>(WeighingCompletedEvent.Type, "tracking.ConfirmWeighbridgeOnWeighingCompleted");
+        mq.Subscribe<ShipmentCancelledEvent>(ShipmentCancelledEvent.Type, "tracking.CancelTripOnShipmentCancelled");
     });
 });
 

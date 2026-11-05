@@ -13,6 +13,10 @@ public sealed class StationDto
     public string Code { get; set; } = string.Empty;
     /// <summary>Address.</summary>
     public string? Address { get; set; }
+    /// <summary>İl.</summary>
+    public string? City { get; set; }
+    /// <summary>İlçe.</summary>
+    public string? District { get; set; }
     /// <summary>Phone.</summary>
     public string? Phone { get; set; }
     /// <summary>Latitude.</summary>
@@ -34,6 +38,8 @@ public sealed class StationDto
             Name = entity.Name,
             Code = entity.Code,
             Address = entity.Address,
+            City = entity.City,
+            District = entity.District,
             Phone = entity.Phone,
             Latitude = entity.Latitude,
             Longitude = entity.Longitude,

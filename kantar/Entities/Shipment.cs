@@ -26,6 +26,9 @@ public sealed class Shipment : BaseEntity, ITenantEntity
     public string? DriverName { get; set; }
     /// <summary>DispatchedAt.</summary>
     public DateTimeOffset? DispatchedAt { get; set; }
+    /// <summary>CancelReason.</summary>
+    [MaxLength(250)]
+    public string? CancelReason { get; set; }
     /// <summary>Note.</summary>
     public string? Note { get; set; }
     /// <summary>StationId.</summary>

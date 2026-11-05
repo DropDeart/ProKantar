@@ -23,6 +23,8 @@ public sealed class ShipmentDto
     public string? DriverName { get; set; }
     /// <summary>DispatchedAt.</summary>
     public DateTimeOffset? DispatchedAt { get; set; }
+    /// <summary>CancelReason.</summary>
+    public string? CancelReason { get; set; }
     /// <summary>Note.</summary>
     public string? Note { get; set; }
     /// <summary>StationId.</summary>
@@ -45,6 +47,7 @@ public sealed class ShipmentDto
             DriverId = entity.DriverId,
             DriverName = entity.DriverName,
             DispatchedAt = entity.DispatchedAt,
+            CancelReason = entity.CancelReason,
             Note = entity.Note,
             StationId = entity.StationId,
             VehicleId = entity.VehicleId,

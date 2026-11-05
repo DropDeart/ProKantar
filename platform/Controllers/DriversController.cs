@@ -19,7 +19,7 @@ public sealed class DriversController : BaseController
         var query = new GetDriverByIdQuery
         {
             Id = id,
-            RestrictToOwnerId = OwnerRestriction("Operator", "TenantAdmin", "SuperAdmin"),
+            RestrictToOwnerId = OwnerRestriction("SuperAdmin"),
         };
         var result = await Mediator.Send(query, cancellationToken);
         return result is null ? NotFound() : Ok(result);

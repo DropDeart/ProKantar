@@ -33,6 +33,8 @@ public sealed class Company : BaseEntity, ITenantEntity
     public string? Email { get; set; }
     /// <summary>Address.</summary>
     public string? Address { get; set; }
+    /// <summary>Bağlı ProKantar şirketi (firma rehberinden eklendiyse).</summary>
+    public Guid? LinkedTenantId { get; set; }
     /// <summary>IsActive.</summary>
     public bool IsActive { get; set; } = true;
     /// <summary>TenantId.</summary>

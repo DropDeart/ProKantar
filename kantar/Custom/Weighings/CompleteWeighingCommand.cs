@@ -48,13 +48,16 @@ internal sealed class CompleteWeighingHandler(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        // Tartım ve olay için gereken adlar tek sorguda; dönen Weighing takip edilir (tracked).
-        var row = await db.Weighings
-            .Where(w => w.Id == request.Id)
-            .Select(w => new { Weighing = w, MaterialName = w.Material!.Name, CompanyName = w.Company!.Name })
-            .FirstOrDefaultAsync(cancellationToken)
+        var tenantId = currentTenant.RequireTenantId();
+
+        // Eş zamanlı iki tamamlama (çift tık, istemci yeniden denemesi) aynı tartımı iki kez kapatmasın:
+        // satır kilitlenir, ikinci istek ilki bitince durumu Completed görür.
+        await unitOfWork.BeginTransactionAsync(cancellationToken);
+        await db.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT 1 FROM \"Weighings\" WHERE \"Id\" = {request.Id} FOR UPDATE", cancellationToken);
+
+        var weighing = await db.Weighings.FirstOrDefaultAsync(w => w.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Weighing), request.Id);
-        var weighing = row.Weighing;
 
         if (weighing.Status != WeighingStatus.Open)
         {
@@ -66,7 +69,18 @@ internal sealed class CompleteWeighingHandler(
             throw new ValidationException(nameof(request.Reason), "Elle girilen ağırlık için gerekçe zorunlu.");
         }
 
-        var tenantId = currentTenant.RequireTenantId();
+        // Malzeme/firma sonradan silinmiş olsa da tartım kapanabilsin: adlar silinmiş kayıtlardan da okunur.
+        var materialName = await db.Materials.IgnoreQueryFilters()
+            .Where(m => m.Id == weighing.MaterialId && m.TenantId == tenantId)
+            .Select(m => m.Name)
+            .FirstOrDefaultAsync(cancellationToken);
+        var companyName = weighing.CompanyId is { } companyId
+            ? await db.Companies.IgnoreQueryFilters()
+                .Where(c => c.Id == companyId && c.TenantId == tenantId)
+                .Select(c => c.Name)
+                .FirstOrDefaultAsync(cancellationToken)
+            : null;
+
         var now = DateTimeOffset.UtcNow;
         var netKg = await ApplyWeightsAsync(weighing, request, now, cancellationToken);
         weighing.Status = WeighingStatus.Completed;
@@ -100,14 +114,15 @@ internal sealed class CompleteWeighingHandler(
             Plate = weighing.Plate,
             DriverId = weighing.DriverId,
             MaterialId = weighing.MaterialId,
-            MaterialName = row.MaterialName,
+            MaterialName = materialName ?? string.Empty,
             CompanyId = weighing.CompanyId,
-            CompanyName = row.CompanyName,
+            CompanyName = companyName,
             NetKg = netKg,
             CompletedAt = now,
         }, cancellationToken);
         await eventBus.PublishAsync(new WeighingUpdatedEvent { Data = WeighingDto.From(weighing) }, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await unitOfWork.CommitAsync(cancellationToken);
     }
 
     /// <summary>İkinci tartımı veya kayıtlı darayı uygular; brüt = büyük, dara = küçük ağırlık. Net'i döner.</summary>

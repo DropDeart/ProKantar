@@ -156,7 +156,8 @@ app.MapControllers();
 // gRPC uçları kimlik doğrulaması ister: kullanıcı token'ı (çağıran servis iletir) ya da servis token'ı
 // (client_credentials). Bkz. docs/ARCH.md §5.1.1.
 app.MapGrpcService<Platform.Grpc.CarrierGrpcService>().RequireAuthorization();
-app.MapGrpcService<Platform.Grpc.DriverGrpcService>().RequireAuthorization();
+// Şoför kaydı yalnız servis token'ıyla (bf_svc) okunur (elle; BaseForge regen'de yeniden ekleyin).
+app.MapGrpcService<Platform.Grpc.DriverGrpcService>().RequireAuthorization(policy => policy.RequireClaim("bf_svc", "1"));
 app.MapGrpcService<Platform.Grpc.VehicleGrpcService>().RequireAuthorization();
 app.MapGrpcService<Platform.Grpc.TrailerGrpcService>().RequireAuthorization();
 app.MapGrpcService<Platform.Grpc.DriverVehicleGrpcService>().RequireAuthorization();

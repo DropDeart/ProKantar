@@ -28,8 +28,9 @@ public sealed class DriverGrpcService(ISender sender) : DriverService.DriverServ
             UserId = value.UserId.ToString(),
             FullName = value.FullName,
             Phone = value.Phone,
-            NationalId = value.NationalId ?? string.Empty,
-            LicenseNo = value.LicenseNo ?? string.Empty,
+            // TCKN ve ehliyet no servisler arasında taşınmaz (KVKK; elle, regen'de koruyun).
+            NationalId = string.Empty,
+            LicenseNo = string.Empty,
             KvkkConsentAt = value.KvkkConsentAt?.ToString("o", CultureInfo.InvariantCulture) ?? string.Empty,
             LocationConsent = value.LocationConsent,
             IsActive = value.IsActive,

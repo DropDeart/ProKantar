@@ -44,6 +44,9 @@ public sealed class TripStop : BaseEntity
     /// <summary>Onay zamanı: teslimatta şoför, kantarda tartım tamamlanınca.</summary>
     public DateTimeOffset? ConfirmedAt { get; set; }
 
+    /// <summary>Kantar durağını onaylayan tartım (aynı olay iki kez gelirse ikinci durak kapanmasın).</summary>
+    public Guid? ConfirmedByWeighingId { get; set; }
+
     /// <summary>Durak bitti mi?</summary>
     public bool IsDone => Status is StopStatus.Departed or StopStatus.Skipped || ConfirmedAt is not null;
 
@@ -63,4 +66,11 @@ public sealed class TripStop : BaseEntity
 
     /// <summary>Durağı onaylar (ilk onay geçerlidir).</summary>
     public void Confirm(DateTimeOffset at) => ConfirmedAt ??= at;
+
+    /// <summary>Kantar durağını tartımla onaylar.</summary>
+    public void ConfirmByWeighing(Guid weighingId, DateTimeOffset at)
+    {
+        Confirm(at);
+        ConfirmedByWeighingId ??= weighingId;
+    }
 }

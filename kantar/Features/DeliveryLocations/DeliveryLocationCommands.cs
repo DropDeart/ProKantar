@@ -14,6 +14,16 @@ public sealed class CreateDeliveryLocationCommand : ICommand<Guid>
     public string Name { get; set; } = string.Empty;
     /// <summary>Address.</summary>
     public string? Address { get; set; }
+    /// <summary>İl.</summary>
+    [MaxLength(50)]
+    public string? City { get; set; }
+    /// <summary>İlçe.</summary>
+    [MaxLength(50)]
+    public string? District { get; set; }
+    /// <summary>Kaynak ProKantar şirketi (nokta o şirketin istasyonundan alındıysa).</summary>
+    public Guid? SourceTenantId { get; set; }
+    /// <summary>Kaynak istasyon (o şirkette).</summary>
+    public Guid? SourceStationId { get; set; }
     /// <summary>Latitude.</summary>
     public decimal Latitude { get; set; }
     /// <summary>Longitude.</summary>
@@ -49,6 +59,10 @@ internal sealed class CreateDeliveryLocationHandler : ICommandHandler<CreateDeli
         {
             Name = request.Name,
             Address = request.Address,
+            City = request.City,
+            District = request.District,
+            SourceTenantId = request.SourceTenantId,
+            SourceStationId = request.SourceStationId,
             Latitude = request.Latitude,
             Longitude = request.Longitude,
             RadiusM = request.RadiusM,
@@ -73,6 +87,16 @@ public sealed class UpdateDeliveryLocationCommand : ICommand
     public string Name { get; set; } = string.Empty;
     /// <summary>Address.</summary>
     public string? Address { get; set; }
+    /// <summary>İl.</summary>
+    [MaxLength(50)]
+    public string? City { get; set; }
+    /// <summary>İlçe.</summary>
+    [MaxLength(50)]
+    public string? District { get; set; }
+    /// <summary>Kaynak ProKantar şirketi (nokta o şirketin istasyonundan alındıysa).</summary>
+    public Guid? SourceTenantId { get; set; }
+    /// <summary>Kaynak istasyon (o şirkette).</summary>
+    public Guid? SourceStationId { get; set; }
     /// <summary>Latitude.</summary>
     public decimal Latitude { get; set; }
     /// <summary>Longitude.</summary>
@@ -108,6 +132,10 @@ internal sealed class UpdateDeliveryLocationHandler : ICommandHandler<UpdateDeli
             ?? throw new NotFoundException("DeliveryLocation", request.Id);
         entity.Name = request.Name;
         entity.Address = request.Address;
+        entity.City = request.City;
+        entity.District = request.District;
+        entity.SourceTenantId = request.SourceTenantId;
+        entity.SourceStationId = request.SourceStationId;
         entity.Latitude = request.Latitude;
         entity.Longitude = request.Longitude;
         entity.RadiusM = request.RadiusM;

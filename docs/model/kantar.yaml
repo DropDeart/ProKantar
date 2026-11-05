@@ -326,9 +326,9 @@ entities:
       update: [TenantAdmin, Operator]
       delete: [TenantAdmin]
     props:
-      shipmentNo: { type: string, maxLength: 30 }
+      shipmentNo: { type: string, maxLength: 30 } # kiracı içinde UNIQUE elle (UX_Shipments_TenantId_ShipmentNo)
       direction: { type: enum, values: [Inbound, Outbound] }                  # Inbound = gelen araç randevusu
-      status: { type: enum, values: [Draft, Dispatched, InProgress, Completed, Cancelled], default: "Draft", serverManaged: true } # Dispatched'a yalnız elle yazılan DispatchShipment komutu geçirir
+      status: { type: enum, values: [Draft, Dispatched, InProgress, Completed, Cancelled], default: "Draft", serverManaged: true } # Dispatched'a yalnız elle yazılan DispatchShipment komutu geçirir; InProgress/Completed tracking/TripStatusChanged ile
       plannedAt: datetime
       plate: { type: string, maxLength: 15 }                                  # snapshot
       driverId: { type: guid, nullable: true }                                # platform/Driver (yalnız ID)

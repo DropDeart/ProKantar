@@ -21,6 +21,7 @@ internal static class TrackingServiceCollectionExtensions
         services.AddHostedService<PingPartitionMaintenanceService>();
 
         services.AddSingleton<IStopProgressTracker, StopProgressTracker>();
+        services.AddScoped<ITripStatusPublisher, TripStatusPublisher>();
         services.AddScoped<ITripCloser, TripCloser>();
         services.AddScoped<IDriverTripFinder, DriverTripFinder>();
 

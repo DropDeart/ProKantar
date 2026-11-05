@@ -24,7 +24,7 @@ public sealed class OtpChallenge
     /// <summary>Son geçerlilik.</summary>
     public DateTimeOffset ExpiresAt { get; set; }
 
-    /// <summary>Hatalı deneme sayısı.</summary>
+    /// <summary>Doğrulama denemesi sayısı (karşılaştırmadan önce atomik artırılır).</summary>
     public int Attempts { get; set; }
 
     /// <summary>Doğru kodla kullanıldığı zaman.</summary>

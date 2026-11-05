@@ -12,6 +12,9 @@ public interface ILocationPingStore
     /// <summary>Seferin konumlarından çizgi (GeoJSON LineString); en az iki konum yoksa null.</summary>
     Task<string?> GetLineGeoJsonAsync(Guid tripId, DateTimeOffset from, CancellationToken cancellationToken);
 
+    /// <summary>Seferin <paramref name="from"/> sonrası en yeni konum zamanı; konum yoksa null.</summary>
+    Task<DateTimeOffset?> GetLatestRecordedAtAsync(Guid tripId, DateTimeOffset from, CancellationToken cancellationToken);
+
     /// <summary>Seferin son konumu.</summary>
     Task<LastLocation?> GetLastAsync(Guid tripId, DateTimeOffset from, CancellationToken cancellationToken);
 }
@@ -46,6 +49,11 @@ internal sealed class LocationPingStore(ISqlQuery sql) : ILocationPingStore
         LIMIT 1
         """;
 
+    private const string LatestSql = """
+        SELECT max(recorded_at) FROM location_pings
+        WHERE trip_id = @TripId AND recorded_at >= @From
+        """;
+
     public Task AddAsync(Guid tripId, Guid driverUserId, IReadOnlyList<PingSample> pings, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(pings);
@@ -64,6 +72,12 @@ internal sealed class LocationPingStore(ISqlQuery sql) : ILocationPingStore
 
     public Task<string?> GetLineGeoJsonAsync(Guid tripId, DateTimeOffset from, CancellationToken cancellationToken)
         => sql.QuerySingleOrDefaultAsync<string?>(LineSql, new { TripId = tripId, From = from.ToUniversalTime() }, cancellationToken);
+
+    public async Task<DateTimeOffset?> GetLatestRecordedAtAsync(Guid tripId, DateTimeOffset from, CancellationToken cancellationToken)
+    {
+        var latest = await sql.QuerySingleOrDefaultAsync<DateTime?>(LatestSql, new { TripId = tripId, From = from.ToUniversalTime() }, cancellationToken);
+        return latest is { } value ? new DateTimeOffset(DateTime.SpecifyKind(value, DateTimeKind.Utc)) : null;
+    }
 
     public async Task<LastLocation?> GetLastAsync(Guid tripId, DateTimeOffset from, CancellationToken cancellationToken)
     {

@@ -61,16 +61,17 @@ public sealed class Trip : BaseEntity
     /// <summary>Konum kabul ediyor mu?</summary>
     public bool IsOpen => Status is TripStatus.Planned or TripStatus.Active;
 
-    /// <summary>Planlanmış seferi ilk konumla başlatır.</summary>
-    public void StartIfPlanned(DateTimeOffset at)
+    /// <summary>Planlanmış seferi ilk konumla başlatır; başlattıysa true.</summary>
+    public bool StartIfPlanned(DateTimeOffset at)
     {
         if (Status != TripStatus.Planned)
         {
-            return;
+            return false;
         }
 
         Status = TripStatus.Active;
         StartedAt = at;
+        return true;
     }
 
     /// <summary>Açık seferi iptal eder; iptal ettiyse true.</summary>

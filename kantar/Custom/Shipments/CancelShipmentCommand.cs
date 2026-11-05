@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Kantar.Custom.Shipments;
 
 /// <summary>
-/// Taslak ya da yayınlanmış sevkiyatı gerekçeyle iptal eder. Yayınlanmışsa <see cref="ShipmentCancelledEvent"/>
+/// Taslak, yayınlanmış ya da yoldaki sevkiyatı gerekçeyle iptal eder. Yayınlanmışsa <see cref="ShipmentCancelledEvent"/>
 /// ile tracking seferi kapatır ve sevkiyat şoförün uygulamasından düşer.
 /// </summary>
 public sealed class CancelShipmentCommand : ICommand
@@ -36,14 +36,19 @@ internal sealed class CancelShipmentHandler(
             throw new ValidationException(nameof(request.Reason), $"İptal gerekçesi zorunlu (en çok {MaxReasonLength} karakter).");
         }
 
+        // Tracking'den gelen ilerleme/tamamlanma ile yarışmasın: satır kilitlenir, durum kilit altında okunur.
+        await unitOfWork.BeginTransactionAsync(cancellationToken);
+        await db.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT 1 FROM \"Shipments\" WHERE \"Id\" = {request.Id} FOR UPDATE", cancellationToken);
+
         var shipment = await db.Shipments.FirstOrDefaultAsync(s => s.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Shipment), request.Id);
-        if (shipment.Status is not (ShipmentStatus.Draft or ShipmentStatus.Dispatched))
+        if (shipment.Status is not (ShipmentStatus.Draft or ShipmentStatus.Dispatched or ShipmentStatus.InProgress))
         {
             throw new ValidationException(nameof(Shipment.Status), "Tamamlanmış ya da iptal edilmiş sevkiyat iptal edilemez.");
         }
 
-        var wasDispatched = shipment.Status == ShipmentStatus.Dispatched;
+        var wasDispatched = shipment.Status is ShipmentStatus.Dispatched or ShipmentStatus.InProgress;
         shipment.Status = ShipmentStatus.Cancelled;
         shipment.CancelReason = reason;
 
@@ -59,6 +64,7 @@ internal sealed class CancelShipmentHandler(
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await unitOfWork.CommitAsync(cancellationToken);
     }
 }
 

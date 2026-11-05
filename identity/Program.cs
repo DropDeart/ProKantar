@@ -9,7 +9,6 @@ using Identity.Accounts;
 using Identity.Otp;
 using Identity.Tenancy;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -193,18 +192,10 @@ builder.Services.AddHttpClient("ServiceHealthClient", c => c.Timeout = TimeSpan.
 
 var app = builder.Build();
 
-// Reverse proxy (nginx vb.) arkasında çalışırken gerçek şema/host'u (https, gerçek domain) Kestrel'e
-// bildirir — aksi halde OpenIddict discovery/authorization/token URL'leri yanlış (http, proxy'nin iç
-// adresi) görünür. Docker port publish NAT'i yüzünden istek değişken bir gateway IP'sinden geldiği için
-// KnownIPNetworks/KnownProxies temizlenir; güvenlik, container portunun yalnızca 127.0.0.1'e publish
-// edilmesinden gelir (dışarıdan doğrudan erişilemez, yalnızca aynı host'taki nginx erişebilir).
-var forwardedHeadersOptions = new ForwardedHeadersOptions
-{
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
-};
-forwardedHeadersOptions.KnownIPNetworks.Clear();
-forwardedHeadersOptions.KnownProxies.Clear();
-app.UseForwardedHeaders(forwardedHeadersOptions);
+// Reverse proxy (nginx vb.) arkasında gerçek şema/istemci IP'si (OpenIddict URL'leri, rate limit). Başlık yalnız
+// loopback ve ForwardedHeaders:KnownProxies/KnownNetworks'ten kabul edilir; aksi halde istemci başlığı
+// sahteleyip IP başına sınırı atlatabilirdi. Docker'da nginx'in göründüğü gateway ağı yapılandırılmalı.
+app.UseTrustedForwardedHeaders(app.Configuration);
 
 // Şema oluştur + seed (dev kolaylığı; prod'da migration kullanılır).
 await using (var scope = app.Services.CreateAsyncScope())

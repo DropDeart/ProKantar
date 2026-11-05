@@ -75,6 +75,15 @@ public sealed class OtpOptions
     /// <summary>Aynı hedefe saatte en fazla gönderim.</summary>
     public int MaxPerHour { get; set; } = 5;
 
+    /// <summary>Aynı hedefe (telefon/e-posta) pencere başına en fazla doğrulama denemesi (tüm kodlar toplamı).</summary>
+    public int MaxVerifyPerTarget { get; set; } = 10;
+
+    /// <summary>Aynı IP'den pencere başına en fazla kodla giriş denemesi (token ucu).</summary>
+    public int MaxVerifyPerIp { get; set; } = 30;
+
+    /// <summary>Doğrulama sınırlarının penceresi (sn).</summary>
+    public int VerifyWindowSeconds { get; set; } = 900;
+
     /// <summary>Ülke kodsuz yazılan telefonlar için (örn. 0555… → +90555…).</summary>
     public string DefaultCountryCode { get; set; } = "+90";
 }

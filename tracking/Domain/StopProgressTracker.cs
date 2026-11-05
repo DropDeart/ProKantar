@@ -13,7 +13,8 @@ public interface IStopProgressTracker
 
 /// <summary>
 /// Yarıçap içine girince varış, yarıçap × <see cref="TrackingOptions.DepartureFactor"/> dışına çıkınca ayrılış.
-/// Doğruluğu düşük konumlar yok sayılır.
+/// Doğruluğu düşük konumlar yok sayılır. Konumlar zaman sırasıyla verilmelidir; durağın varışından eski konum
+/// ayrılış saymaz.
 /// </summary>
 internal sealed class StopProgressTracker(IOptions<TrackingOptions> options) : IStopProgressTracker
 {
@@ -37,7 +38,8 @@ internal sealed class StopProgressTracker(IOptions<TrackingOptions> options) : I
             {
                 stop.MarkArrived(ping.RecordedAt);
             }
-            else if (stop.Status == StopStatus.Arrived && distance > stop.RadiusM * _options.DepartureFactor)
+            else if (stop.Status == StopStatus.Arrived && distance > stop.RadiusM * _options.DepartureFactor
+                     && !(ping.RecordedAt < stop.ArrivedAt))
             {
                 stop.MarkDeparted(ping.RecordedAt);
             }

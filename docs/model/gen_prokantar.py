@@ -260,10 +260,10 @@ kantar = dict(
              access={"list": STAFF, "getById": STAFF, "create": STAFF, "update": STAFF, "delete": [TADMIN]},
              filter=["StationId", "VehicleId", "DriverId", "Direction", "Status", "Plate"],
              search=["ShipmentNo", "Plate", "DriverName"], fields=[
-            F("shipmentNo", "string", ml=30),
+            F("shipmentNo", "string", ml=30, note="kiracı içinde UNIQUE elle (UX_Shipments_TenantId_ShipmentNo)"),
             F("direction", "enum", values=["Inbound", "Outbound"], note="Inbound = gelen araç randevusu"),
             F("status", "enum", values=["Draft", "Dispatched", "InProgress", "Completed", "Cancelled"], default="Draft", sm=True,
-              note="Dispatched'a yalnız elle yazılan DispatchShipment komutu geçirir"),
+              note="Dispatched'a yalnız elle yazılan DispatchShipment komutu geçirir; InProgress/Completed tracking/TripStatusChanged ile"),
             F("plannedAt", "datetime"),
             F("plate", "string", ml=15, note="snapshot"),
             F("driverId", "guid", True, note="platform/Driver (yalnız ID)"),

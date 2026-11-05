@@ -16,7 +16,7 @@ public sealed class SaveShipmentPlanCommand : ICommand<Guid>
     /// <summary>Güncellenecek taslak (route'tan); yeni plan için boş.</summary>
     public Guid? Id { get; set; }
 
-    /// <summary>Boşsa sunucu üretir: <c>{istasyon kodu}-S{yyMMdd}-{sıra}</c>.</summary>
+    /// <summary>Boşsa sunucu üretir: <c>{istasyon kodu}-S{yyMMdd}-{sıra}</c> (gün Türkiye saatine göre).</summary>
     public string? ShipmentNo { get; set; }
 
     /// <summary>Çıkış = teslimata giden araç; giriş = kantara gelen araç randevusu.</summary>
@@ -90,18 +90,28 @@ internal sealed class SaveShipmentPlanHandler(KantarDbContext db, IUnitOfWork un
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException(nameof(Station), request.StationId);
 
+        var tenantId = currentTenant.RequireTenantId();
+        var manualNo = string.IsNullOrWhiteSpace(request.ShipmentNo) ? null : request.ShipmentNo.Trim();
+
+        // Numara ayırma kilidi commit'e kadar tutulur; eş zamanlı iki plan aynı numarayı alamaz.
+        await unitOfWork.BeginTransactionAsync(cancellationToken);
         var shipment = request.Id is { } id ? await LoadDraftAsync(id, cancellationToken) : null;
+        await ShipmentNumbers.RequireUniqueAsync(db, tenantId, manualNo, shipment?.Id, cancellationToken);
         if (shipment is null)
         {
-            shipment = new Shipment { ShipmentNo = await NextNumberAsync(request, station.Code, cancellationToken) };
+            shipment = new Shipment
+            {
+                ShipmentNo = manualNo
+                    ?? await ShipmentNumbers.AllocateAsync(db, tenantId, ShipmentNumbers.PrefixFor(station.Code, request.PlannedAt), cancellationToken),
+            };
             db.Shipments.Add(shipment);
         }
         else
         {
             db.ShipmentStops.RemoveRange(await db.ShipmentStops.Where(s => s.ShipmentId == shipment.Id).ToListAsync(cancellationToken));
-            if (!string.IsNullOrWhiteSpace(request.ShipmentNo))
+            if (manualNo is not null)
             {
-                shipment.ShipmentNo = request.ShipmentNo.Trim();
+                shipment.ShipmentNo = manualNo;
             }
         }
 
@@ -120,7 +130,16 @@ internal sealed class SaveShipmentPlanHandler(KantarDbContext db, IUnitOfWork un
             db.ShipmentStops.Add(await ToStopAsync(shipment.Id, ++sequence, plan, cancellationToken));
         }
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (ShipmentNumbers.IsDuplicate(ex))
+        {
+            throw new ValidationException(ShipmentNumbers.Field, $"{shipment.ShipmentNo} numaralı sevkiyat zaten var.");
+        }
+
+        await unitOfWork.CommitAsync(cancellationToken);
         return shipment.Id;
     }
 
@@ -131,22 +150,6 @@ internal sealed class SaveShipmentPlanHandler(KantarDbContext db, IUnitOfWork un
         return shipment.Status == ShipmentStatus.Draft
             ? shipment
             : throw new ValidationException(nameof(Shipment.Status), "Yalnız taslak sevkiyat düzenlenebilir.");
-    }
-
-    /// <summary>İstemci numara vermediyse istasyon ve güne göre sıradaki numara.</summary>
-    private async Task<string> NextNumberAsync(SaveShipmentPlanCommand request, string stationCode, CancellationToken cancellationToken)
-    {
-        if (!string.IsNullOrWhiteSpace(request.ShipmentNo))
-        {
-            return request.ShipmentNo.Trim();
-        }
-
-        var prefix = $"{stationCode}-S{request.PlannedAt:yyMMdd}-";
-        // Silinmiş taslakların numarası yeniden verilmesin diye soft-delete filtresi atlanır; kiracı elle süzülür.
-        var tenantId = currentTenant.RequireTenantId();
-        var count = await db.Shipments.IgnoreQueryFilters()
-            .CountAsync(s => s.TenantId == tenantId && s.ShipmentNo.StartsWith(prefix), cancellationToken);
-        return $"{prefix}{count + 1:000}";
     }
 
     private async Task<ShipmentStop> ToStopAsync(Guid shipmentId, int sequence, ShipmentPlanStop plan, CancellationToken cancellationToken)

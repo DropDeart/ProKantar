@@ -183,10 +183,22 @@ internal sealed class CompleteWeighingHandler(
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException(nameof(DeliveryLocation), deliveryLocationId);
 
+        // Sevkiyat no fiş no'dur; fiş no istasyon içinde benzersiz olduğundan başka istasyonda aynısı varsa
+        // istasyonun sıradaki sevkiyat numarası verilir (kiracı içinde benzersizlik).
+        var shipmentNo = weighing.TicketNo;
+        if (string.IsNullOrWhiteSpace(shipmentNo) || await ShipmentNumbers.IsTakenAsync(db, tenantId, shipmentNo, null, cancellationToken))
+        {
+            var stationCode = await db.Stations.IgnoreQueryFilters()
+                .Where(s => s.Id == weighing.StationId && s.TenantId == tenantId)
+                .Select(s => s.Code)
+                .FirstAsync(cancellationToken);
+            shipmentNo = await ShipmentNumbers.AllocateAsync(db, tenantId, ShipmentNumbers.PrefixFor(stationCode, now), cancellationToken);
+        }
+
         // Status varsayılanı Draft; TenantId SaveChanges'te BaseForge tarafından damgalanır.
         var shipment = new Shipment
         {
-            ShipmentNo = weighing.TicketNo,
+            ShipmentNo = shipmentNo,
             Direction = ShipmentDirection.Outbound,
             PlannedAt = now,
             Plate = weighing.Plate,

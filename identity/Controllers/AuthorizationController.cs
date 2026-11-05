@@ -27,6 +27,7 @@ public sealed class AuthorizationController : ControllerBase
     private readonly ITenantTokenResolver _tenantResolver;
     private readonly IMembershipService _memberships;
     private readonly IContactVerificationService _verification;
+    private readonly IOtpAttemptLimiter _otpLimiter;
     private readonly MultiTenancyOptions _tenancy;
 
     public AuthorizationController(
@@ -36,6 +37,7 @@ public sealed class AuthorizationController : ControllerBase
         ITenantTokenResolver tenantResolver,
         IMembershipService memberships,
         IContactVerificationService verification,
+        IOtpAttemptLimiter otpLimiter,
         AuthOptions authOptions)
     {
         _userManager = userManager;
@@ -44,6 +46,7 @@ public sealed class AuthorizationController : ControllerBase
         _tenantResolver = tenantResolver;
         _memberships = memberships;
         _verification = verification;
+        _otpLimiter = otpLimiter;
         _tenancy = authOptions.MultiTenancy;
     }
 
@@ -133,6 +136,8 @@ public sealed class AuthorizationController : ControllerBase
         ApplicationUser user;
         try
         {
+            // IP başına sınır (güvenilir proxy dışında X-Forwarded-For dikkate alınmaz); hedef başı sınır OtpService'te.
+            _otpLimiter.EnsureClientAllowed(HttpContext.Connection.RemoteIpAddress?.ToString());
             var code = (string?)request.GetParameter("code") ?? string.Empty;
             var email = (string?)request.GetParameter("email");
             user = !string.IsNullOrWhiteSpace(email)

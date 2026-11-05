@@ -16,7 +16,7 @@ public interface IOtpService
     /// <summary>Kod üretir ve gönderir; bekleme/saatlik sınır aşılırsa 429.</summary>
     Task<OtpSendResult> SendAsync(OtpChannel channel, string target, OtpPurpose purpose, CancellationToken cancellationToken);
 
-    /// <summary>Son kodu doğrular ve tüketir; yanlışsa deneme sayısını artırır.</summary>
+    /// <summary>Son kodu atomik olarak doğrular ve tek seferlik tüketir; her deneme sayılır, hedef başı sınır aşılırsa 429.</summary>
     Task<bool> VerifyAsync(OtpChannel channel, string target, OtpPurpose purpose, string code, CancellationToken cancellationToken);
 }
 
@@ -26,6 +26,7 @@ internal sealed class OtpService(
     ISmsSender sms,
     IEmailSender email,
     AuthOptions authOptions,
+    IOtpAttemptLimiter limiter,
     TimeProvider clock) : IOtpService
 {
     private readonly OtpOptions _options = authOptions.Otp;
@@ -82,27 +83,44 @@ internal sealed class OtpService(
 
     public async Task<bool> VerifyAsync(OtpChannel channel, string target, OtpPurpose purpose, string code, CancellationToken cancellationToken)
     {
+        limiter.EnsureTargetAllowed(target);
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            return false;
+        }
+
         // Yalnız son gönderilen kod geçerlidir; eski kodlar yeni gönderimle hükümsüz kalır.
         var challenge = await Challenges
+            .AsNoTracking()
             .Where(c => c.Channel == channel && c.Target == target && c.Purpose == purpose)
             .OrderByDescending(c => c.CreatedAt)
+            .Select(c => new { c.Id, c.CodeHash })
             .FirstOrDefaultAsync(cancellationToken);
 
         var now = clock.GetUtcNow();
-        if (challenge is null || !challenge.IsUsable(now, _options.MaxAttempts) || string.IsNullOrWhiteSpace(code))
+        if (challenge is null || !await TryReserveAttemptAsync(challenge.Id, now, cancellationToken))
         {
             return false;
         }
 
-        if (!OtpCode.Matches(challenge.CodeHash, code))
-        {
-            challenge.Attempts++;
-            await db.SaveChangesAsync(cancellationToken);
-            return false;
-        }
+        return OtpCode.Matches(challenge.CodeHash, code) && await TryConsumeAsync(challenge.Id, cancellationToken);
+    }
 
-        challenge.ConsumedAt = now;
-        await db.SaveChangesAsync(cancellationToken);
-        return true;
+    /// <summary>
+    /// Karşılaştırmadan önce deneme hakkını atomik ayırır (koşullu UPDATE): eşzamanlı istekler toplamda
+    /// MaxAttempts'ten fazla karşılaştırma yapamaz.
+    /// </summary>
+    private async Task<bool> TryReserveAttemptAsync(Guid id, DateTimeOffset now, CancellationToken cancellationToken)
+        => await Challenges
+            .Where(c => c.Id == id && c.ConsumedAt == null && c.ExpiresAt > now && c.Attempts < _options.MaxAttempts)
+            .ExecuteUpdateAsync(set => set.SetProperty(c => c.Attempts, c => c.Attempts + 1), cancellationToken) == 1;
+
+    /// <summary>Kodu tek seferlik tüketir; aynı kodla eşzamanlı ikinci istek 0 satır etkiler ve reddedilir.</summary>
+    private async Task<bool> TryConsumeAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var now = clock.GetUtcNow();
+        return await Challenges
+            .Where(c => c.Id == id && c.ConsumedAt == null && c.ExpiresAt > now)
+            .ExecuteUpdateAsync(set => set.SetProperty(c => c.ConsumedAt, now), cancellationToken) == 1;
     }
 }

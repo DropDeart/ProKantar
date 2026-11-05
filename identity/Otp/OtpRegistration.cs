@@ -13,6 +13,7 @@ public static class OtpRegistration
     public static IServiceCollection AddOtp(this IServiceCollection services, AuthOptions options)
     {
         services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<IOtpAttemptLimiter, OtpAttemptLimiter>();
         services.AddScoped<IOtpService, OtpService>();
         if (options.Otp.Enabled)
         {

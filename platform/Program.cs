@@ -1,8 +1,8 @@
 using BaseForge.API.Extensions;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
+using Platform.Custom.Configuration;
 using Platform.Data;
 
 // h2c (TLS'siz HTTP/2) desteği — container/yerel ağda düz HTTP üzerinden gRPC istemci çağrıları için.
@@ -96,20 +96,8 @@ Platform.ProgramHooks.Services(builder);
 
 var app = builder.Build();
 
-// Reverse proxy (nginx vb.) arkasında çalışırken gerçek şema/host'u (https, gerçek domain)
-// Kestrel'e bildirir — aksi halde OpenAPI/discovery gibi üretilen mutlak URL'ler yanlış (http,
-// proxy'nin iç adresi) görünür. Docker port publish NAT'i yüzünden istek, proxy'nin gerçek IP'si
-// yerine değişken bir docker gateway IP'sinden gelir; bu yüzden KnownIPNetworks/KnownProxies temizlenir
-// (herkesten gelen X-Forwarded-* güvenilir sayılır). Güvenlik, container portunun yalnızca
-// 127.0.0.1'e (host loopback) publish edilmesinden gelir — dışarıdan bu porta doğrudan erişilemez,
-// yalnızca aynı host'taki nginx erişebilir.
-var forwardedHeadersOptions = new ForwardedHeadersOptions
-{
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
-};
-forwardedHeadersOptions.KnownIPNetworks.Clear();
-forwardedHeadersOptions.KnownProxies.Clear();
-app.UseForwardedHeaders(forwardedHeadersOptions);
+// X-Forwarded-* yalnız loopback ve ForwardedHeaders bölümündeki güvenilir proxy/ağlardan kabul edilir.
+app.UseTrustedForwardedHeaders(app.Configuration);
 
 // Şemayı her ortamda oluştur — önceden yalnızca Development'ta yapılıyordu ve üretilen projede EF
 // migration olmadığı için production'da tablolar hiç oluşmuyordu. Postgres erişilemezse uygulama yine

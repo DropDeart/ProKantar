@@ -3,7 +3,7 @@ using Tracking.Entities;
 
 namespace Tracking.Domain;
 
-/// <summary>Durakları biten seferi kapatır ve rotasını kaydeder.</summary>
+/// <summary>Durakları biten seferi kapatır, rotasını kaydeder ve kantar'a bildirir.</summary>
 public interface ITripCloser
 {
     /// <summary>Kapattıysa true. Değişikliği çağıran kaydeder.</summary>
@@ -11,7 +11,7 @@ public interface ITripCloser
 }
 
 /// <inheritdoc cref="ITripCloser" />
-internal sealed class TripCloser(ITripRouteStore routes) : ITripCloser
+internal sealed class TripCloser(ITripRouteStore routes, ITripStatusPublisher statusPublisher) : ITripCloser
 {
     public async Task<bool> CloseIfDoneAsync(Trip trip, DateTimeOffset at, CancellationToken cancellationToken)
     {
@@ -22,6 +22,7 @@ internal sealed class TripCloser(ITripRouteStore routes) : ITripCloser
         }
 
         await routes.RecordAsync(trip.Id, trip.StartedAt ?? trip.PlannedAt, cancellationToken);
+        await statusPublisher.PublishAsync(trip, at, cancellationToken);
         return true;
     }
 }

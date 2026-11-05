@@ -8,7 +8,7 @@ internal static class PingBatchValidator
     /// <summary>Çevrimdışı biriken konumların kabul edildiği en eski geçmiş.</summary>
     public static readonly TimeSpan MaxAge = TimeSpan.FromDays(7);
 
-    /// <summary>Cihaz saati sapmasına tolerans.</summary>
+    /// <summary>Cihaz saati sapmasına tolerans: ötesindeki ileri tarih reddedilir, içindeki "şimdi"ye kırpılır.</summary>
     public static readonly TimeSpan MaxClockSkew = TimeSpan.FromMinutes(5);
 
     public static void Validate(IReadOnlyList<PingInput>? pings, int maxBatchSize, DateTimeOffset now)

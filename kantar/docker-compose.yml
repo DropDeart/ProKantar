@@ -32,6 +32,7 @@ services:
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=prokantar_kantar_db;Username=baseforge;Password=${POSTGRES_PASSWORD}"
       RabbitMq__Password: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD .env dosyasinda tanimli olmali}
       Auth__ServiceClient__ClientSecret: ${Auth__ServiceClient__ClientSecret:-}
+      Cors__AllowedOrigins__0: ${CORS_ORIGIN:-http://localhost:3000}
       # Prod'da: Identity'nin gerçek adresi ve onun Auth__Issuer değeri (yedek issuer — Identity yeniden
       # başlarken oluşabilecek 401'leri önler). Boşsa Program.cs'deki varsayılan/metadata kullanılır.
       # Auth__Authority: "https://identity.ornek.com"

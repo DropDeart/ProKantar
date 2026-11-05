@@ -1,4 +1,5 @@
 using BaseForge.API.Controllers;
+using Kantar.Custom.Dashboard;
 using Kantar.Custom.Shipments;
 using Kantar.Custom.Weighings;
 using Microsoft.AspNetCore.Authorization;
@@ -14,6 +15,11 @@ namespace Kantar.Custom.Controllers;
 [Route("api")]
 public sealed class OperationsController : BaseController
 {
+    /// <summary>Panel ana sayfası özeti (bugün, sahadaki araçlar, son 7 gün).</summary>
+    [HttpGet("Dashboard/summary")]
+    public async Task<ActionResult<DashboardSummaryDto>> DashboardSummary(CancellationToken cancellationToken)
+        => Ok(await Mediator.Send(new DashboardSummaryQuery(), cancellationToken));
+
     /// <summary>Sevkiyat planını yayınlar; tracking seferi açar.</summary>
     [HttpPost("Shipments/{id:guid}/dispatch")]
     public async Task<IActionResult> DispatchShipment(Guid id, CancellationToken cancellationToken)

@@ -23,6 +23,9 @@ public sealed class VehicleSpec : BaseEntity
     /// <summary>Doluysa araç bu firmanın kendi filosundadır ("Araçlarımız").</summary>
     public Guid? FleetTenantId { get; set; }
 
+    /// <summary>Filo aracının varsayılan şoförü (firma atar, şoför onayı gerekmez); sevkiyat planında otomatik gelir.</summary>
+    public Guid? DefaultDriverId { get; set; }
+
     /// <summary>Araç (servis içi ilişki).</summary>
     [DeleteBehavior(DeleteBehavior.Cascade)]
     public Vehicle? Vehicle { get; set; }

@@ -3,6 +3,7 @@ using BaseForge.Core.Serialization;
 using BaseForge.Core.CQRS;
 using BaseForge.Core.Exceptions;
 using Microsoft.EntityFrameworkCore;
+using Platform.Custom.Drivers;
 using Platform.Custom.Validation;
 using Platform.Data;
 using Platform.Entities;
@@ -29,7 +30,8 @@ public sealed record VehicleSpecDto(
     decimal? RegisteredMaxGrossKg,
     decimal? MaxGrossKg,
     MaxGrossSource? MaxGrossSource,
-    bool InFleet);
+    bool InFleet,
+    DriverSearchItemDto? DefaultDriver);
 
 /// <summary>Aracın özelliği (model, ruhsat değeri, geçerli azami ağırlık).</summary>
 public sealed class GetVehicleSpecQuery : IQuery<VehicleSpecDto>
@@ -90,6 +92,17 @@ internal static class VehicleSpecs
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
+        // Varsayılan şoför yalnız aracın filosundaki firmaya gösterilir.
+        var driverIds = rows
+            .Where(r => tenantId is not null && r.Spec?.FleetTenantId == tenantId && r.Spec.DefaultDriverId is not null)
+            .Select(r => r.Spec!.DefaultDriverId!.Value)
+            .Distinct()
+            .ToList();
+        var drivers = driverIds.Count == 0
+            ? new Dictionary<Guid, DriverSearchItemDto>()
+            : (await DriverItems.ProjectAsync(db, db.Drivers.AsNoTracking().Where(d => driverIds.Contains(d.Id)), false, cancellationToken))
+                .ToDictionary(d => d.Id);
+
         return rows.Select(r =>
         {
             var model = r.Model is { } m ? VehicleModelDto.From(m) : null;
@@ -98,7 +111,8 @@ internal static class VehicleSpecs
                 ? (reg, MaxGrossSource.Registration)
                 : model is not null ? (model.MaxGrossKg, MaxGrossSource.Catalog) : ((decimal?)null, (MaxGrossSource?)null);
             var inFleet = tenantId is not null && r.Spec?.FleetTenantId == tenantId;
-            return new VehicleSpecDto(r.Id, r.Plate, r.IsClaimed, model, registered, maxGross, source, inFleet);
+            var defaultDriver = inFleet && r.Spec!.DefaultDriverId is { } driverId ? drivers.GetValueOrDefault(driverId) : null;
+            return new VehicleSpecDto(r.Id, r.Plate, r.IsClaimed, model, registered, maxGross, source, inFleet, defaultDriver);
         }).ToList();
     }
 
@@ -273,6 +287,41 @@ internal sealed class RemoveFleetVehicleHandler(PlatformDbContext db) : ICommand
                 s => s.VehicleId == request.VehicleId && s.FleetTenantId == request.TenantId, cancellationToken)
             ?? throw new NotFoundException("Vehicle", request.VehicleId);
         spec.FleetTenantId = null;
+        await db.SaveChangesAsync(cancellationToken);
+    }
+}
+
+/// <summary>Filo aracına varsayılan şoför atar ya da kaldırır (şoför onayı gerekmez).</summary>
+public sealed class SetFleetDriverCommand : ICommand
+{
+    /// <summary>Araç (rotadan).</summary>
+    [JsonIgnore]
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public Guid VehicleId { get; set; }
+
+    /// <summary>Şoför; boşsa atama kaldırılır.</summary>
+    public Guid? DriverId { get; set; }
+
+    /// <summary>Firma (controller doldurur).</summary>
+    [JsonIgnore]
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public Guid TenantId { get; set; }
+}
+
+internal sealed class SetFleetDriverHandler(PlatformDbContext db) : ICommandHandler<SetFleetDriverCommand>
+{
+    public async Task Handle(SetFleetDriverCommand request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var spec = await db.VehicleSpecs.FirstOrDefaultAsync(
+                s => s.VehicleId == request.VehicleId && s.FleetTenantId == request.TenantId, cancellationToken)
+            ?? throw new NotFoundException("Vehicle", request.VehicleId);
+        if (request.DriverId is { } driverId && !await db.Drivers.AnyAsync(d => d.Id == driverId && d.IsActive, cancellationToken))
+        {
+            throw new ValidationException(nameof(request.DriverId), "Şoför bulunamadı ya da pasif.");
+        }
+
+        spec.DefaultDriverId = request.DriverId;
         await db.SaveChangesAsync(cancellationToken);
     }
 }

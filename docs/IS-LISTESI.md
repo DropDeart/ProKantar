@@ -41,6 +41,10 @@ Yapılacaklar (öneri):
   - uçlar: `GET VehicleModels/brands`, `GET VehicleModels?brand=&bodyType=&search=`, `POST VehicleModels/suggestions` (öneri, onaya kadar yalnız önerene görünür), `PUT VehicleModels/{id}` (SuperAdmin onay/düzeltme), `GET Vehicles/mine` (mobil: şoförün araçları), `GET/PUT Vehicles/{id}/spec`, `GET/POST Fleet`, `DELETE Fleet/{vehicleId}`
   - yetki (spec yazma): sahibi; firma personeli araç kendi filosundaysa ya da sahiplenilmemiş ve başka filoda değilse; SuperAdmin
   - panel: `/panel/araclar` (marka → model seçimi, katalog değerleri, ruhsat değeri)
+- [x] Plakadan şoför (06.11, kullanıcı kararı: firma ataması şoför onayı istemez):
+  - `VehicleSpec.DefaultDriverId` — filo aracının varsayılan şoförü, `PUT Fleet/{vehicleId}/driver` (null kaldırır); Araçlarımız'da "Şoför ata"
+  - `GET Drivers/for-plate?plate=` — filodaki varsayılan şoför (ilk sırada) + aracı aktif kullananlar
+  - sevkiyat formu: plaka alanında "Araçlarımız" listesi; plaka girilince varsayılan şoför, yoksa aracı kullanan tek şoför otomatik gelir, birden çoksa seçim çipleri; elle seçilen şoförün üzerine yazılmaz
 - [ ] **Mobil:** şoför araç eklerken `VehicleModels/brands` → `VehicleModels?brand=` → `PUT Vehicles/{id}/spec`; listede yoksa `POST VehicleModels/suggestions`.
 - [ ] Yönetici paneli: onay bekleyen model önerileri (`GET VehicleModels?pending=true` + `PUT VehicleModels/{id}`).
 - [ ] Araç kapasitesi denetimi: kantar, platformdan aracın azami yüklü ağırlığını (gRPC) alıp planlanan yük + kayıtlı dara (`TenantVehicle.StoredTareKg`) ile karşılaştırsın; çıkış tartımında ölçülen brüt azami ağırlığı aşarsa engel/uyarı (karar bekliyor). `VehicleType.maxGrossKg` bununla gereksizleşiyor.

@@ -84,26 +84,8 @@ internal sealed class DriverSearchHandler(PlatformDbContext db) : IQueryHandler<
                 throw new ValidationException(nameof(request.By), "Arama ölçütü geçersiz.");
         }
 
-        var rows = await drivers
-            .OrderBy(d => d.FullName)
-            .Take(MaxResults)
-            .Select(d => new
-            {
-                d.Id,
-                d.FullName,
-                d.Phone,
-                d.LocationConsent,
-                Plates = db.DriverVehicles
-                    .Where(dv => dv.DriverId == d.Id && dv.EndedAt == null)
-                    .Select(dv => dv.Vehicle!.Plate)
-                    .ToList(),
-            })
-            .ToListAsync(cancellationToken);
-
         var showPhone = request.By == DriverSearchBy.Phone;
-        return rows
-            .Select(r => new DriverSearchItemDto(r.Id, r.FullName, showPhone ? r.Phone : MaskPhone(r.Phone), r.LocationConsent, r.Plates.Distinct().ToList()))
-            .ToList();
+        return await DriverItems.ProjectAsync(db, drivers.OrderBy(d => d.FullName).Take(MaxResults), showPhone, cancellationToken);
     }
 
     /// <summary>Rakamlara indirger, baştaki 90/0'ı atar: 5XXXXXXXXX.</summary>
@@ -118,10 +100,37 @@ internal sealed class DriverSearchHandler(PlatformDbContext db) : IQueryHandler<
         return digits.Length == 11 && digits[0] == '0' ? digits[1..] : digits;
     }
 
+    private static string EscapeLike(string value)
+        => value.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
+}
+
+/// <summary>Şoför listelerinin ortak biçimi: az alan, maskeli telefon, aktif kullandığı araçların plakaları.</summary>
+internal static class DriverItems
+{
+    /// <summary>Verilen sıradaki şoförleri DTO'ya çevirir.</summary>
+    public static async Task<List<DriverSearchItemDto>> ProjectAsync(
+        PlatformDbContext db, IQueryable<Platform.Entities.Driver> drivers, bool showPhone, CancellationToken cancellationToken)
+    {
+        var rows = await drivers
+            .Select(d => new
+            {
+                d.Id,
+                d.FullName,
+                d.Phone,
+                d.LocationConsent,
+                Plates = db.DriverVehicles
+                    .Where(dv => dv.DriverId == d.Id && dv.EndedAt == null)
+                    .Select(dv => dv.Vehicle!.Plate)
+                    .ToList(),
+            })
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .Select(r => new DriverSearchItemDto(r.Id, r.FullName, showPhone ? r.Phone : MaskPhone(r.Phone), r.LocationConsent, r.Plates.Distinct().ToList()))
+            .ToList();
+    }
+
     /// <summary>"5321234567" → "532*****67": tanıma yeter, numara sızdırmaz.</summary>
     private static string MaskPhone(string phone)
         => phone.Length < 6 ? "***" : $"{phone[..3]}{new string('*', phone.Length - 5)}{phone[^2..]}";
-
-    private static string EscapeLike(string value)
-        => value.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
 }

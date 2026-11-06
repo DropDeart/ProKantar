@@ -1,5 +1,3 @@
-using BaseForge.API.Controllers;
-using BaseForge.Core.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Platform.Custom.Fleet;
@@ -98,6 +96,17 @@ public sealed class FleetController : CallerController
         return Ok(await Mediator.Send(command, cancellationToken));
     }
 
+    /// <summary>Filo aracına varsayılan şoför atar (<c>driverId: null</c> kaldırır); şoför onayı gerekmez.</summary>
+    [HttpPut("{vehicleId:guid}/driver")]
+    public async Task<IActionResult> SetDriver(Guid vehicleId, SetFleetDriverCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        command.VehicleId = vehicleId;
+        command.TenantId = TenantId;
+        await Mediator.Send(command, cancellationToken);
+        return NoContent();
+    }
+
     /// <summary>Aracı filodan çıkarır.</summary>
     [HttpDelete("{vehicleId:guid}")]
     public async Task<IActionResult> Remove(Guid vehicleId, CancellationToken cancellationToken)
@@ -105,17 +114,4 @@ public sealed class FleetController : CallerController
         await Mediator.Send(new RemoveFleetVehicleCommand { VehicleId = vehicleId, TenantId = TenantId }, cancellationToken);
         return NoContent();
     }
-}
-
-/// <summary>Çağıranın kimliği ve firması. Platform çok kiracılı değildir; firma token'daki <c>tenant_id</c> claim'inden okunur.</summary>
-public abstract class CallerController : BaseController
-{
-    /// <summary>Çağıran kullanıcı; token'da yoksa 403.</summary>
-    protected Guid UserId => CurrentUserId ?? throw new ForbiddenException("Kullanıcı kimliği (sub) token'da bulunamadı.");
-
-    /// <summary>Token'daki firma; yoksa <c>null</c>.</summary>
-    protected Guid? TenantIdOrNull => Guid.TryParse(User.FindFirst("tenant_id")?.Value, out var id) ? id : null;
-
-    /// <summary>Token'daki firma; yoksa 403.</summary>
-    protected Guid TenantId => TenantIdOrNull ?? throw new ForbiddenException("Firma bilgisi token'da bulunamadı.");
 }

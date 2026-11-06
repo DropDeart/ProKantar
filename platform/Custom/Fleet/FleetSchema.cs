@@ -35,12 +35,14 @@ public static class FleetSchema
                 CONSTRAINT "FK_VehicleSpecs_VehicleModels_VehicleModelId" REFERENCES "VehicleModels" ("Id") ON DELETE RESTRICT,
             "RegisteredMaxGrossKg" numeric NULL,
             "FleetTenantId" uuid NULL,
+            "DefaultDriverId" uuid NULL,
             "CreatedAt" timestamp with time zone NOT NULL,
             "UpdatedAt" timestamp with time zone NULL,
             "CreatedBy" text NULL,
             "IsDeleted" boolean NOT NULL,
             "DeletedAt" timestamp with time zone NULL
         );
+        ALTER TABLE "VehicleSpecs" ADD COLUMN IF NOT EXISTS "DefaultDriverId" uuid NULL;
         CREATE UNIQUE INDEX IF NOT EXISTS "IX_VehicleSpecs_VehicleId" ON "VehicleSpecs" ("VehicleId");
         CREATE INDEX IF NOT EXISTS "IX_VehicleSpecs_VehicleModelId" ON "VehicleSpecs" ("VehicleModelId");
         CREATE INDEX IF NOT EXISTS "IX_VehicleSpecs_FleetTenantId" ON "VehicleSpecs" ("FleetTenantId");

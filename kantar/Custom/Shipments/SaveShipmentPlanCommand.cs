@@ -64,6 +64,22 @@ public sealed class ShipmentPlanStop
 
     /// <summary>Durak notu.</summary>
     public string? Note { get; set; }
+
+    /// <summary>Yük satırları (yalnız teslimat/yükleme durağında).</summary>
+    public IReadOnlyList<ShipmentPlanLine> Lines { get; set; } = [];
+}
+
+/// <summary>Durak yük satırı: malzeme ve planlanan miktar.</summary>
+public sealed class ShipmentPlanLine
+{
+    /// <summary>Malzeme.</summary>
+    public Guid MaterialId { get; set; }
+
+    /// <summary>Planlanan miktar (sıfırdan büyük).</summary>
+    public decimal PlannedQuantity { get; set; }
+
+    /// <summary>Birim; boşsa malzemenin birimi.</summary>
+    public MaterialUnit? Unit { get; set; }
 }
 
 internal sealed class SaveShipmentPlanHandler(KantarDbContext db, IUnitOfWork unitOfWork, ICurrentTenant currentTenant)
@@ -108,6 +124,9 @@ internal sealed class SaveShipmentPlanHandler(KantarDbContext db, IUnitOfWork un
         }
         else
         {
+            db.ShipmentStopLines.RemoveRange(await db.ShipmentStopLines
+                .Where(l => db.ShipmentStops.Any(s => s.Id == l.ShipmentStopId && s.ShipmentId == shipment.Id))
+                .ToListAsync(cancellationToken));
             db.ShipmentStops.RemoveRange(await db.ShipmentStops.Where(s => s.ShipmentId == shipment.Id).ToListAsync(cancellationToken));
             if (manualNo is not null)
             {
@@ -124,11 +143,20 @@ internal sealed class SaveShipmentPlanHandler(KantarDbContext db, IUnitOfWork un
         shipment.DriverName = request.DriverName?.Trim();
         shipment.Note = request.Note?.Trim();
 
+        var materials = await LoadMaterialsAsync(request.Stops, cancellationToken);
+        var stops = new List<ShipmentStop>();
+        var lines = new List<ShipmentStopLine>();
         var sequence = 0;
         foreach (var plan in request.Stops)
         {
-            db.ShipmentStops.Add(await ToStopAsync(shipment.Id, ++sequence, plan, cancellationToken));
+            var stop = await ToStopAsync(shipment.Id, ++sequence, plan, cancellationToken);
+            db.ShipmentStops.Add(stop);
+            stops.Add(stop);
+            lines.AddRange(ToLines(stop, plan, materials));
         }
+
+        db.ShipmentStopLines.AddRange(lines);
+        await ShipmentLoadCapacity.RequireWithinAsync(db, stops, lines, l => materials[l.MaterialId], cancellationToken);
 
         try
         {
@@ -150,6 +178,54 @@ internal sealed class SaveShipmentPlanHandler(KantarDbContext db, IUnitOfWork un
         return shipment.Status == ShipmentStatus.Draft
             ? shipment
             : throw new ValidationException(nameof(Shipment.Status), "Yalnız taslak sevkiyat düzenlenebilir.");
+    }
+
+    private async Task<Dictionary<Guid, Material>> LoadMaterialsAsync(IReadOnlyList<ShipmentPlanStop> stops, CancellationToken cancellationToken)
+    {
+        var ids = stops.SelectMany(s => s.Lines).Select(l => l.MaterialId).Distinct().ToList();
+        return ids.Count == 0
+            ? []
+            : await db.Materials.AsNoTracking().Where(m => ids.Contains(m.Id)).ToDictionaryAsync(m => m.Id, cancellationToken);
+    }
+
+    /// <summary>Durağın yük satırlarını doğrular ve malzeme bilgisini kopyalar.</summary>
+    private static IEnumerable<ShipmentStopLine> ToLines(ShipmentStop stop, ShipmentPlanStop plan, Dictionary<Guid, Material> materials)
+    {
+        if (plan.Lines.Count == 0)
+        {
+            return [];
+        }
+
+        if (stop.StopType == ShipmentStopStopType.Weighbridge)
+        {
+            throw new ValidationException(StopsField, $"{stop.Sequence}. durak kantar durağı; yük yalnız teslimat ya da yükleme durağına yazılır.");
+        }
+
+        var lineNo = 0;
+        return plan.Lines.Select(line =>
+        {
+            lineNo++;
+            if (!materials.TryGetValue(line.MaterialId, out var material) || !material.IsActive)
+            {
+                throw new ValidationException(StopsField, $"{stop.Sequence}. durağın {lineNo}. yük satırında malzeme bulunamadı ya da pasif.");
+            }
+
+            if (line.PlannedQuantity <= 0)
+            {
+                throw new ValidationException(StopsField, $"{stop.Sequence}. durağın {lineNo}. yük satırında miktar sıfırdan büyük olmalı.");
+            }
+
+            return new ShipmentStopLine
+            {
+                ShipmentStopId = stop.Id,
+                Sequence = lineNo,
+                MaterialId = material.Id,
+                MaterialCode = material.Code,
+                MaterialName = material.Name,
+                PlannedQuantity = line.PlannedQuantity,
+                Unit = line.Unit ?? material.Unit,
+            };
+        }).ToList();
     }
 
     private async Task<ShipmentStop> ToStopAsync(Guid shipmentId, int sequence, ShipmentPlanStop plan, CancellationToken cancellationToken)

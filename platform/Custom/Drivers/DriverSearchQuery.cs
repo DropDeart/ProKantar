@@ -1,6 +1,7 @@
 using BaseForge.Core.CQRS;
 using BaseForge.Core.Exceptions;
 using Microsoft.EntityFrameworkCore;
+using Platform.Custom.Validation;
 using Platform.Data;
 
 namespace Platform.Custom.Drivers;
@@ -57,14 +58,14 @@ internal sealed class DriverSearchHandler(PlatformDbContext db) : IQueryHandler<
                 break;
 
             case DriverSearchBy.Plate:
-                var plate = PlateKey(request.Query);
+                var plate = Plates.Key(request.Query);
                 if (plate.Length < 5)
                 {
                     throw new ValidationException(nameof(request.Query), "Geçerli bir plaka girin.");
                 }
 
                 var driverIds = db.DriverVehicles
-                    .Where(dv => dv.EndedAt == null && dv.Vehicle!.Plate.Replace(" ", "").ToUpper() == plate)
+                    .Where(dv => dv.EndedAt == null && dv.Vehicle!.Plate == plate)
                     .Select(dv => dv.DriverId);
                 drivers = drivers.Where(d => driverIds.Contains(d.Id));
                 break;
@@ -116,10 +117,6 @@ internal sealed class DriverSearchHandler(PlatformDbContext db) : IQueryHandler<
 
         return digits.Length == 11 && digits[0] == '0' ? digits[1..] : digits;
     }
-
-    /// <summary>Boşluksuz büyük harf plaka anahtarı (34ABC123).</summary>
-    private static string PlateKey(string value)
-        => new string(value.Where(char.IsAsciiLetterOrDigit).ToArray()).ToUpperInvariant();
 
     /// <summary>"5321234567" → "532*****67": tanıma yeter, numara sızdırmaz.</summary>
     private static string MaskPhone(string phone)

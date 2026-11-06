@@ -40,15 +40,22 @@ internal static partial class ProgramHooks
 
     static partial void ConfigureApp(WebApplication app)
     {
-        // EnsureCreated var olan tabloya indeks eklemez; elle eklenen indeksler burada idempotent kurulur.
-        try
+        using (var scope = app.Services.CreateScope())
         {
-            using var scope = app.Services.CreateScope();
-            scope.ServiceProvider.GetRequiredService<KantarDbContext>().Database.ExecuteSqlRaw(ShipmentNumbers.UniqueIndexSql);
-        }
-        catch (Exception ex)
-        {
-            app.Logger.LogWarning(ex, "Sevkiyat numarası benzersizlik indeksi kurulamadı (çift numara var mı?).");
+            var database = scope.ServiceProvider.GetRequiredService<KantarDbContext>().Database;
+
+            // EnsureCreated var olan tabloya indeks eklemez; elle eklenen indeksler burada idempotent kurulur.
+            try
+            {
+                database.ExecuteSqlRaw(ShipmentNumbers.UniqueIndexSql);
+            }
+            catch (Exception ex)
+            {
+                app.Logger.LogWarning(ex, "Sevkiyat numarası benzersizlik indeksi kurulamadı (çift numara var mı?).");
+            }
+
+            // Durak yük satırları tablosu (CREATE TABLE IF NOT EXISTS).
+            database.ExecuteSqlRaw(ShipmentLoadSchema.Sql);
         }
 
         // e-İrsaliye ayar/sayaç/anahtar tabloları (CREATE TABLE IF NOT EXISTS).

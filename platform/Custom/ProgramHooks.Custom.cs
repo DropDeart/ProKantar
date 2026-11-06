@@ -1,6 +1,9 @@
 using MediatR;
 using MediatR.Pipeline;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Platform.Custom.Fleet;
+using Platform.Data;
 
 namespace Platform;
 
@@ -21,5 +24,14 @@ internal static partial class ProgramHooks
         {
             builder.Services.AddTransient(service, implementation);
         }
+    }
+
+    static partial void ConfigureApp(WebApplication app)
+    {
+        // Araç kataloğu + araç özelliği tabloları (CREATE TABLE IF NOT EXISTS) ve başlangıç kataloğu.
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PlatformDbContext>();
+        db.Database.ExecuteSqlRaw(FleetSchema.Sql);
+        VehicleModelCatalog.SeedAsync(db).GetAwaiter().GetResult();
     }
 }

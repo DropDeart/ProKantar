@@ -44,6 +44,8 @@ public sealed class KantarDbContext : BaseForgeDbContext
     public DbSet<Shipment> Shipments => Set<Shipment>();
     /// <summary>ShipmentStop tablosu.</summary>
     public DbSet<ShipmentStop> ShipmentStops => Set<ShipmentStop>();
+    /// <summary>ShipmentStopLine tablosu (elle eklendi: durak yük satırları, Custom/Shipments).</summary>
+    public DbSet<ShipmentStopLine> ShipmentStopLines => Set<ShipmentStopLine>();
 
     /// <summary>
     /// Enum alanlar veritabanında sayı değil, değer adıyla (string) saklanır — enum'a değer eklenip sırası

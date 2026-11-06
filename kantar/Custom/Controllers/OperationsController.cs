@@ -37,6 +37,11 @@ public sealed class OperationsController : BaseController
     public async Task<ActionResult<PagedResult<ShipmentBoardItemDto>>> ShipmentBoard([FromQuery] ShipmentBoardQuery query, CancellationToken cancellationToken)
         => Ok(await Mediator.Send(query, cancellationToken));
 
+    /// <summary>Sevkiyat duraklarının yük satırları (planlanan miktar).</summary>
+    [HttpGet("Shipments/{id:guid}/loads")]
+    public async Task<ActionResult<IReadOnlyList<ShipmentStopLineDto>>> ShipmentLoads(Guid id, CancellationToken cancellationToken)
+        => Ok(await Mediator.Send(new ShipmentLoadsQuery { ShipmentId = id }, cancellationToken));
+
     /// <summary>Yeni sevkiyat planı (taslak) ve durakları.</summary>
     [HttpPost("Shipments/plan")]
     public async Task<ActionResult<Guid>> CreateShipmentPlan(SaveShipmentPlanCommand command, CancellationToken cancellationToken)

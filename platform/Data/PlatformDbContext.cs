@@ -26,6 +26,10 @@ public sealed class PlatformDbContext : BaseForgeDbContext
     public DbSet<DriverVehicle> DriverVehicles => Set<DriverVehicle>();
     /// <summary>Device tablosu.</summary>
     public DbSet<Device> Devices => Set<Device>();
+    /// <summary>VehicleModel tablosu (elle eklendi: araç kataloğu, Custom/Fleet).</summary>
+    public DbSet<VehicleModel> VehicleModels => Set<VehicleModel>();
+    /// <summary>VehicleSpec tablosu (elle eklendi: araç modeli/ruhsat/filo bağı, Custom/Fleet).</summary>
+    public DbSet<VehicleSpec> VehicleSpecs => Set<VehicleSpec>();
 
     /// <summary>
     /// Enum alanlar veritabanında sayı değil, değer adıyla (string) saklanır — enum'a değer eklenip sırası
@@ -36,5 +40,6 @@ public sealed class PlatformDbContext : BaseForgeDbContext
         ArgumentNullException.ThrowIfNull(configurationBuilder);
         base.ConfigureConventions(configurationBuilder);
         configurationBuilder.Properties<DevicePlatform>().HaveConversion<string>();
+        configurationBuilder.Properties<VehicleBodyType>().HaveConversion<string>();
     }
 }

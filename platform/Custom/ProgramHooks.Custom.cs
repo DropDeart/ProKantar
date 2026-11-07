@@ -27,10 +27,17 @@ internal static partial class ProgramHooks
             builder.Services.AddTransient(service, implementation);
         }
 
-        // SMS: Netgsm hesabı .env'de tanımlıysa toplu SMS, değilse log. Şoför davetleri SMS ile bildirilir.
+        // SMS: Netgsm hesabı .env'de tanımlıysa toplu SMS, değilse log (yalnız geliştirme). Şoför davetleri SMS ile bildirilir.
         var netgsm = builder.Configuration.GetSection("Netgsm");
         builder.Services.Configure<NetgsmOptions>(netgsm);
-        if (netgsm.Get<NetgsmOptions>()?.IsConfigured == true)
+        var smsConfigured = netgsm.Get<NetgsmOptions>()?.IsConfigured == true;
+        if (!smsConfigured && !builder.Environment.IsDevelopment())
+        {
+            // Davet SMS'i sessizce log'a düşmesin: production'da hesap eksikse uygulama açılmaz (identity'deki kuralla aynı).
+            throw new InvalidOperationException("Netgsm için Usercode, Password ve MsgHeader zorunlu (Netgsm__*). SMS'ler log'a yazılırdı.");
+        }
+
+        if (smsConfigured)
         {
             builder.Services.AddHttpClient<ISmsGateway, NetgsmSmsGateway>(c =>
             {

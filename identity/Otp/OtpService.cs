@@ -21,13 +21,14 @@ public interface IOtpService
 }
 
 /// <inheritdoc cref="IOtpService" />
-internal sealed class OtpService(
+internal sealed partial class OtpService(
     IdentityServiceDbContext db,
     ISmsSender sms,
     IEmailSender email,
     AuthOptions authOptions,
     IOtpAttemptLimiter limiter,
-    TimeProvider clock) : IOtpService
+    TimeProvider clock,
+    ILogger<OtpService> logger) : IOtpService
 {
     private readonly OtpOptions _options = authOptions.Otp;
 
@@ -53,7 +54,7 @@ internal sealed class OtpService(
         }
 
         var code = OtpCode.Generate(_options.CodeLength);
-        Challenges.Add(new OtpChallenge
+        var challenge = new OtpChallenge
         {
             Id = Guid.NewGuid(),
             Channel = channel,
@@ -62,9 +63,33 @@ internal sealed class OtpService(
             CodeHash = OtpCode.Hash(code),
             CreatedAt = now,
             ExpiresAt = now.AddSeconds(_options.LifetimeSeconds),
-        });
+        };
+        Challenges.Add(challenge);
         await db.SaveChangesAsync(cancellationToken);
 
+        try
+        {
+            await DeliverAsync(channel, target, code, cancellationToken);
+        }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            // Gitmeyen kod bekleme süresini ve saatlik sınırı doldurmasın: kayıt geri alınır, kullanıcı hemen yeniden deneyebilir.
+            Challenges.Remove(challenge);
+            await db.SaveChangesAsync(CancellationToken.None);
+            if (ex is IdentityException)
+            {
+                throw;
+            }
+
+            LogDeliveryFailed(logger, ex, channel);
+            throw IdentityException.Unavailable("Kod şu an gönderilemedi; biraz sonra tekrar deneyin.");
+        }
+
+        return new OtpSendResult(_options.LifetimeSeconds, _options.ResendCooldownSeconds);
+    }
+
+    private async Task DeliverAsync(OtpChannel channel, string target, string code, CancellationToken cancellationToken)
+    {
         var minutes = Math.Max(1, _options.LifetimeSeconds / 60);
         if (channel == OtpChannel.Sms)
         {
@@ -77,9 +102,10 @@ internal sealed class OtpService(
                 [$"Kod {minutes} dakika geçerlidir. Bu isteği siz yapmadıysanız e-postayı yok sayın; kodu kimseyle paylaşmayın."],
                 highlight: code), cancellationToken);
         }
-
-        return new OtpSendResult(_options.LifetimeSeconds, _options.ResendCooldownSeconds);
     }
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Doğrulama kodu gönderilemedi ({Channel}).")]
+    private static partial void LogDeliveryFailed(ILogger logger, Exception exception, OtpChannel channel);
 
     public async Task<bool> VerifyAsync(OtpChannel channel, string target, OtpPurpose purpose, string code, CancellationToken cancellationToken)
     {

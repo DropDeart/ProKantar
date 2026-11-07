@@ -25,4 +25,7 @@ public class IdentityException(HttpStatusCode status, string errorCode, string m
 
     /// <summary>400.</summary>
     public static IdentityException Invalid(string message) => new(HttpStatusCode.BadRequest, "validation.failed", message);
+
+    /// <summary>503: dış servis (SMS/e-posta sağlayıcısı) şu an yanıt vermiyor.</summary>
+    public static IdentityException Unavailable(string message) => new(HttpStatusCode.ServiceUnavailable, "service.unavailable", message);
 }

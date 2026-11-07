@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json.Serialization;
 using Identity.Configuration;
+using Identity.ErrorHandling;
 
 namespace Identity.Messaging;
 
@@ -70,7 +71,7 @@ public sealed partial class NetgsmSmsSender(HttpClient http, AuthOptions options
 
         return digits.Length == 10 && digits[0] == '5'
             ? digits
-            : throw new InvalidOperationException("Netgsm OTP yalnız Türkiye cep numarasına (5XXXXXXXXX) gönderilir.");
+            : throw IdentityException.Invalid("SMS ile kod yalnız Türkiye cep numarasına (5XX XXX XX XX) gönderilebilir.");
     }
 
     /// <summary>OTP paketi Türkçe karakter kabul etmez: ç ğ ı İ ö ş ü → c g i I o s u.</summary>

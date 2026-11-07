@@ -1,7 +1,33 @@
 # ProKantar iş listesi
 
-Son güncelleme: 06.11.2026. Bu dosya kaldığımız yeri ve sıradaki işleri tutar; yeni bir oturuma buradan başlanır.
+Son güncelleme: 07.11.2026. Bu dosya kaldığımız yeri ve sıradaki işleri tutar; yeni bir oturuma buradan başlanır.
 Repolar: `DropDeart/ProKantar` (backend) ve `DropDeart/ProKantarUI` (ön yüz).
+
+---
+
+## 0. Devir notu (07.11): başka bilgisayardan devam
+
+**Durum:** Şoför daveti + Şoförlerimiz + yakındaki müsait şoförler ve Netgsm SMS entegrasyonu commit'lendi ve push'landı (iki repo). Tek engel Netgsm gönderici adı.
+
+**Netgsm (SMS) — nerede kaldık:**
+- Hesap: abone no `8505103285`. API alt kullanıcısı açıldı; giriş **çalışıyor** (`GET sms/rest/v2/msgheader` → kod `00`).
+- **Engel:** hesapta onaylı gönderici adı (msgheader) **yok**; liste boş. `8505103285` ve `PROKANTAR` ikisi de `40 header problem` (07.11'de geçersiz numarayla, kontör harcamadan denendi).
+- PROKANTAR başlığı talep edildi; onay için E-Tuğra KEP hesabından Netgsm'e evrak gönderilecek. KEP girişi: kepkur.com.tr → "KEP Hesabı Giriş" (webmail.kepkur.com.tr), e-imza ile; aktivasyon cm2.e-tugra.com.tr/Login (ETugraSigner). Kullanıcının e-imzası **e-Güven**'den; E-Tuğra kabul ediyor mu denenmedi, olmazsa E-Tuğra destek.
+- OTP ve toplu SMS paketlerinde kontör var.
+
+**Yeni bilgisayarda yapılacaklar:**
+1. `.env` dosyaları git'te yok (secret). `identity/.env` ve `platform/.env`'i eski makineden taşı ya da `.env.example`'dan yeniden doldur:
+   - identity: `Auth__Messaging__SmsProvider=Netgsm`, `Auth__Messaging__Netgsm__Usercode=8505103285`, `..._Password=<API alt kullanıcısı şifresi>`, `..._MsgHeader=<onaylı başlık>`.
+   - platform: `Netgsm__Usercode`, `Netgsm__Password`, `Netgsm__MsgHeader` (+ isteğe bağlı `Netgsm__AppLink`, uygulama mağaza linki çıkınca). Şifre boşsa SMS'ler log'a yazılır.
+   - **Başlık onaylanana kadar identity'de `SmsProvider=Log` bırak**; Netgsm seçiliyken başlık geçersizse OTP gönderimi hata verir (giriş çalışmaz).
+   - API'de IP kısıtı açılırsa yeni makinenin dış IP'si Netgsm paneline eklenmeli (yoksa kod 30).
+2. Başlık onaylanınca: msgheader sorgula → `.env`'lere yaz → `docker compose up -d --build identity platform` → kendi numarana OTP (`POST /api/account/otp/send`) ve telefonla şoför daveti (panel `/panel/soforler`) ile uçtan uca dene.
+
+**Netgsm API özeti** (dokümantasyon JS ile yükleniyor; okumak için tarayıcı gerekir: netgsm.com.tr/dokuman):
+- Basic Auth = abone no + API alt kullanıcısı şifresi. Hata cevabı HTTP 406 + JSON gövde (`code`).
+- OTP: `POST https://api.netgsm.com.tr/sms/rest/v2/otp` `{msgheader,msg,no}` → `{code:"00",jobid}`. Türkçe karakter yok, ≤155 karakter, yalnız TR cep `5XXXXXXXXX`, 3 dk içinde teslim. Kodlar: 20 metin, 30 kimlik/API izni/IP, 40-41 başlık, 50-52 numara, 60 OTP paketi yok, 70 parametre, 100 sistem.
+- Toplu: `POST .../sms/rest/v2/send` `{msgheader, messages:[{msg,no}], encoding:"TR", iysfilter:"0", appname}` → `{code:"00",jobid}`. Kodlar: 20, 30, 40, 50-51 İYS, 70, 80 sınır, 85 aynı numaraya 1 dk'da >20.
+- Başlık listesi: `GET .../sms/rest/v2/msgheader`.
 
 ---
 
@@ -45,6 +71,20 @@ Yapılacaklar (öneri):
   - `VehicleSpec.DefaultDriverId` — filo aracının varsayılan şoförü, `PUT Fleet/{vehicleId}/driver` (null kaldırır); Araçlarımız'da "Şoför ata"
   - `GET Drivers/for-plate?plate=` — filodaki varsayılan şoför (ilk sırada) + aracı aktif kullananlar
   - sevkiyat formu: plaka alanında "Araçlarımız" listesi; plaka girilince varsayılan şoför, yoksa aracı kullanan tek şoför otomatik gelir, birden çoksa seçim çipleri; elle seçilen şoförün üzerine yazılmaz
+- [x] Şoför daveti + "Şoförlerimiz" + yakındaki müsait şoförler (06.11). Kullanıcı kararları: önce davet, sonra iş teklifi (ayrı adım); konum yalnız "Müsaitim" modunda; kayıtsız numaraya SMS ile uygulama linki; kabul öncesi firma ad + araç tipi + yaklaşık mesafe görür, telefon maskeli.
+  - platform `TenantDriver` (firma, şoför?, telefon, Invited/Active/Declined/Removed, kaynak Search/Phone/Nearby); firmada aynı numaraya tek açık kayıt (kısmi benzersiz indeks)
+  - firma: `GET TenantDrivers`, `POST TenantDrivers/invite` (`driverId` ya da `phone`), `DELETE TenantDrivers/{id}` (geri çek / çıkar), `POST TenantDrivers/summaries` (yakındakilerin adı + aracı + bağ durumu)
+  - şoför (mobil): `GET me/invitations`, `POST me/invitations/{id}/accept|decline` — davet şoför kaydına ya da token'daki **doğrulanmış telefona** (`phone_number`, identity'ye eklendi) gelir; kabul için şoför profili gerekir
+  - tracking: `PUT/DELETE api/driver/availability` (Müsaitim; yalnız son konum, 30 dk ping gelmezse düşer), `GET api/availability/nearby?latitude&longitude&radiusKm` (personel; yalnız kullanıcı kimliği + 0,5 km'ye yuvarlı mesafe)
+  - bildirim `IDriverNotifier` → şimdilik `LogDriverNotifier` (uygulama bildirimi / SMS log'a yazılır)
+  - şoför telefonu ve plakası kayıtta anahtar biçimine çevrilir; kullanıcı başına tek şoför profili (`CreateDriverGuard`)
+  - panel: `/panel/soforler` (liste, kayıtlı şoför / telefonla davet, istasyona yakın müsait şoförler)
+- [ ] **Mobil:** "Müsaitim" anahtarı (açıkken birkaç dakikada bir `PUT driver/availability`, kapatınca `DELETE`), davetler ekranı (kabul/red), push bildirimi.
+- [ ] **İş teklifi (Uber mantığı, 2. adım):** sevkiyatı yakındaki müsait şoförlere teklif et, ilk kabul eden alır; teklif süresi, ücret alanı, kabul yarışı (kilit). Karar: teklif yalnız Şoförlerimiz'e mi, herkese mi?
+- [ ] Sevkiyat formunda şoför aramasında önce Şoförlerimiz gelsin.
+- [x] Netgsm OTP SMS (06.11): identity `NetgsmSmsSender` (`sms/rest/v2/otp`, Basic Auth); `Auth__Messaging__SmsProvider=Netgsm` + Usercode/Password/MsgHeader `.env`'de. Metin Türkçe karaktersize çevrilir, ≤155 karakter, yalnız TR cep. Gerçek gönderim gönderici adı onayını bekliyor (bkz. §0).
+- [x] Davet SMS'i (06.11): platform `ISmsGateway` → `NetgsmSmsGateway` (`sms/rest/v2/send`, n:n toplu, `encoding=TR`, `iysfilter=0`); `Netgsm__*` .env'de yoksa `LogSmsGateway`. `SmsDriverNotifier` push gelene kadar kayıtlı/kayıtsız her davete SMS atar; SMS hatası daveti bozmaz. Gerçek gönderim gönderici adı onayını bekliyor (bkz. §0).
+- [ ] İrsaliye linki SMS'i aynı `ISmsGateway` ile; push (FCM).
 - [ ] **Mobil:** şoför araç eklerken `VehicleModels/brands` → `VehicleModels?brand=` → `PUT Vehicles/{id}/spec`; listede yoksa `POST VehicleModels/suggestions`.
 - [ ] Yönetici paneli: onay bekleyen model önerileri (`GET VehicleModels?pending=true` + `PUT VehicleModels/{id}`).
 - [ ] Araç kapasitesi denetimi: kantar, platformdan aracın azami yüklü ağırlığını (gRPC) alıp planlanan yük + kayıtlı dara (`TenantVehicle.StoredTareKg`) ile karşılaştırsın; çıkış tartımında ölçülen brüt azami ağırlığı aşarsa engel/uyarı (karar bekliyor). `VehicleType.maxGrossKg` bununla gereksizleşiyor.
@@ -90,8 +130,8 @@ Açık kalanlar:
 - [ ] Yeni kolonlar ve tablolar servis açılışında idempotent SQL ile kuruluyor (EnsureCreated var olan DB'ye eklemez).
 - [ ] **Regen riski.** Üretici yeniden çalışırsa şu elle değişiklikler ezilir ve yeniden uygulanmalı:
   - kantar: `Kantar.csproj`, `Data/KantarDbContext.cs` (`ShipmentStopLines` DbSet dahil), üretilmiş Entity/Dto/Command dosyalarına eklenen alanlar
-  - identity: `Program.cs`
-  - platform: `Program.cs`, `Grpc/DriverGrpcService.cs`, `Data/PlatformDbContext.cs` (`VehicleModels`/`VehicleSpecs` DbSet + `VehicleBodyType` dönüşümü)
+  - identity: `Program.cs`, `Controllers/AuthorizationController.cs` (`phone_number` claim'i), `Messaging/MessagingRegistration.cs` + `Configuration/AuthOptions.cs` (Netgsm sağlayıcısı; `Messaging/NetgsmSmsSender.cs` elle yazıldı)
+  - platform: `Program.cs`, `Grpc/DriverGrpcService.cs`, `Data/PlatformDbContext.cs` (`VehicleModels`/`VehicleSpecs`/`TenantDrivers` DbSet + enum dönüşümleri)
 
 ## 5. Diğer açık işler
 

@@ -12,6 +12,12 @@ public abstract class CallerController : BaseController
     /// <summary>Token'daki firma; yoksa <c>null</c>.</summary>
     protected Guid? TenantIdOrNull => Guid.TryParse(User.FindFirst("tenant_id")?.Value, out var id) ? id : null;
 
+    /// <summary>Token'daki firma adı.</summary>
+    protected string TenantName => User.FindFirst("tenant_name")?.Value ?? string.Empty;
+
+    /// <summary>Token'daki doğrulanmış telefon (identity yalnız doğrulanmışsa yazar).</summary>
+    protected string? VerifiedPhone => User.FindFirst("phone_number")?.Value;
+
     /// <summary>Token'daki firma; yoksa 403.</summary>
     protected Guid TenantId => TenantIdOrNull ?? throw new ForbiddenException("Firma bilgisi token'da bulunamadı.");
 }

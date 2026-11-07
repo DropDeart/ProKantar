@@ -97,14 +97,36 @@ public sealed class MessagingOptions
     /// <summary>SMTP sağlayıcısı.</summary>
     public const string SmtpProvider = "Smtp";
 
+    /// <summary>Netgsm OTP SMS sağlayıcısı.</summary>
+    public const string NetgsmProvider = "Netgsm";
+
     /// <summary>E-posta: <c>Log</c> ya da <c>Smtp</c>.</summary>
     public string EmailProvider { get; set; } = LogProvider;
 
-    /// <summary>SMS: şimdilik yalnız <c>Log</c> (sağlayıcı <c>ISmsSender</c> ile eklenir).</summary>
+    /// <summary>SMS: <c>Log</c> ya da <c>Netgsm</c>.</summary>
     public string SmsProvider { get; set; } = LogProvider;
 
     /// <summary>SMTP bağlantısı (EmailProvider = Smtp).</summary>
     public SmtpOptions Smtp { get; set; } = new();
+
+    /// <summary>Netgsm OTP hesabı (SmsProvider = Netgsm).</summary>
+    public NetgsmOptions Netgsm { get; set; } = new();
+}
+
+/// <summary>Netgsm hesabı. Şifre .env'de: <c>Auth__Messaging__Netgsm__Password</c>.</summary>
+public sealed class NetgsmOptions
+{
+    /// <summary>Abone numarası (850xxxxxxx, 312xxxxxxx…).</summary>
+    public string Usercode { get; set; } = string.Empty;
+
+    /// <summary>"API Kullanıcısı" türündeki alt kullanıcının şifresi.</summary>
+    public string Password { get; set; } = string.Empty;
+
+    /// <summary>Onaylı gönderici adı (3–11 karakter).</summary>
+    public string MsgHeader { get; set; } = string.Empty;
+
+    /// <summary>Netgsm raporlarında görünen uygulama adı (isteğe bağlı).</summary>
+    public string? AppName { get; set; }
 }
 
 /// <summary>SMTP bağlantısı. Parola .env'de: <c>Auth__Messaging__Smtp__Password</c>.</summary>

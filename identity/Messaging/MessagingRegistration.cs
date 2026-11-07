@@ -14,15 +14,23 @@ public static class MessagingRegistration
         var messaging = options.Messaging;
         var log = MessagingOptions.LogProvider;
         var smtp = MessagingOptions.SmtpProvider;
+        var netgsm = MessagingOptions.NetgsmProvider;
 
         if (messaging.EmailProvider != log && messaging.EmailProvider != smtp)
         {
             throw new InvalidOperationException($"Auth:Messaging:EmailProvider '{messaging.EmailProvider}' desteklenmiyor ({log}, {smtp}).");
         }
 
-        if (messaging.SmsProvider != log)
+        if (messaging.SmsProvider != log && messaging.SmsProvider != netgsm)
         {
-            throw new InvalidOperationException($"Auth:Messaging:SmsProvider '{messaging.SmsProvider}' desteklenmiyor (şimdilik: {log}).");
+            throw new InvalidOperationException($"Auth:Messaging:SmsProvider '{messaging.SmsProvider}' desteklenmiyor ({log}, {netgsm}).");
+        }
+
+        var ng = messaging.Netgsm;
+        if (messaging.SmsProvider == netgsm
+            && (string.IsNullOrWhiteSpace(ng.Usercode) || string.IsNullOrWhiteSpace(ng.Password) || string.IsNullOrWhiteSpace(ng.MsgHeader)))
+        {
+            throw new InvalidOperationException("Auth:Messaging:Netgsm için Usercode, Password ve MsgHeader zorunlu.");
         }
 
         if (messaging.EmailProvider == smtp && (string.IsNullOrWhiteSpace(messaging.Smtp.Host) || string.IsNullOrWhiteSpace(messaging.Smtp.FromAddress)))
@@ -41,7 +49,18 @@ public static class MessagingRegistration
         }
 
         services.AddSingleton<LogMessageSender>();
-        services.AddSingleton<ISmsSender>(sp => sp.GetRequiredService<LogMessageSender>());
+        if (messaging.SmsProvider == netgsm)
+        {
+            services.AddHttpClient<ISmsSender, NetgsmSmsSender>(c =>
+            {
+                c.BaseAddress = new Uri("https://api.netgsm.com.tr/");
+                c.Timeout = TimeSpan.FromSeconds(15);
+            });
+        }
+        else
+        {
+            services.AddSingleton<ISmsSender>(sp => sp.GetRequiredService<LogMessageSender>());
+        }
         if (messaging.EmailProvider == smtp)
         {
             services.AddSingleton<IEmailSender, SmtpEmailSender>();

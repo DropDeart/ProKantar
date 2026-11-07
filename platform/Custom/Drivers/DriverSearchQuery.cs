@@ -48,7 +48,7 @@ internal sealed class DriverSearchHandler(PlatformDbContext db) : IQueryHandler<
         switch (request.By)
         {
             case DriverSearchBy.Phone:
-                var phone = PhoneKey(request.Query);
+                var phone = Phones.Key(request.Query);
                 if (phone.Length != 10)
                 {
                     throw new ValidationException(nameof(request.Query), "Geçerli bir cep telefonu girin.");
@@ -88,18 +88,6 @@ internal sealed class DriverSearchHandler(PlatformDbContext db) : IQueryHandler<
         return await DriverItems.ProjectAsync(db, drivers.OrderBy(d => d.FullName).Take(MaxResults), showPhone, cancellationToken);
     }
 
-    /// <summary>Rakamlara indirger, baştaki 90/0'ı atar: 5XXXXXXXXX.</summary>
-    private static string PhoneKey(string value)
-    {
-        var digits = new string(value.Where(char.IsAsciiDigit).ToArray());
-        if (digits.Length == 12 && digits.StartsWith("90", StringComparison.Ordinal))
-        {
-            return digits[2..];
-        }
-
-        return digits.Length == 11 && digits[0] == '0' ? digits[1..] : digits;
-    }
-
     private static string EscapeLike(string value)
         => value.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
 }
@@ -126,11 +114,7 @@ internal static class DriverItems
             .ToListAsync(cancellationToken);
 
         return rows
-            .Select(r => new DriverSearchItemDto(r.Id, r.FullName, showPhone ? r.Phone : MaskPhone(r.Phone), r.LocationConsent, r.Plates.Distinct().ToList()))
+            .Select(r => new DriverSearchItemDto(r.Id, r.FullName, showPhone ? r.Phone : Phones.Mask(r.Phone), r.LocationConsent, r.Plates.Distinct().ToList()))
             .ToList();
     }
-
-    /// <summary>"5321234567" → "532*****67": tanıma yeter, numara sızdırmaz.</summary>
-    private static string MaskPhone(string phone)
-        => phone.Length < 6 ? "***" : $"{phone[..3]}{new string('*', phone.Length - 5)}{phone[^2..]}";
 }

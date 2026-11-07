@@ -3,7 +3,7 @@ using Tracking.Configuration;
 
 namespace Tracking.Data.Pings;
 
-/// <summary>Açılışta ve günde bir: konum tablosunu/bölümlerini hazırlar, süresi dolanları siler.</summary>
+/// <summary>Açılışta ve günde bir: konum tablolarını (sefer konumları + müsait şoförler) ve bölümleri hazırlar, süresi dolanları siler.</summary>
 internal sealed class PingPartitionMaintenanceService(
     IServiceScopeFactory scopeFactory,
     IOptions<TrackingOptions> options,
@@ -41,6 +41,7 @@ internal sealed class PingPartitionMaintenanceService(
         var now = timeProvider.GetUtcNow();
 
         await manager.EnsureTableAsync(cancellationToken);
+        await scope.ServiceProvider.GetRequiredService<Features.Availability.IDriverAvailabilityStore>().EnsureTableAsync(cancellationToken);
         await manager.EnsurePartitionsAsync(now, MonthsAhead, cancellationToken);
 
         var dropped = await manager.DropExpiredAsync(now, options.Value.RetentionMonths, cancellationToken);

@@ -225,6 +225,12 @@ public sealed class AuthorizationController : ControllerBase
         identity.AddClaim(Claims.Name, user.UserName ?? string.Empty);
         identity.AddClaim(Claims.Email, user.Email ?? string.Empty);
 
+        // Doğrulanmış telefon (elle eklendi; regen'de yeniden ekleyin): platform şoför davetini bu numarayla eşler.
+        if (user.PhoneNumberConfirmed && !string.IsNullOrEmpty(user.PhoneNumber))
+        {
+            identity.AddClaim(Claims.PhoneNumber, user.PhoneNumber);
+        }
+
         // Şirket içi roller yalnızca aktif şirketin üyeliğinden gelir; global atanmış olsa da yazılmaz.
         var memberRoles = _tenancy.Enabled ? _tenancy.AllMemberRoles : [];
         var roles = (await _userManager.GetRolesAsync(user)).Where(r => !memberRoles.Contains(r, StringComparer.Ordinal));

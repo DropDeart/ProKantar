@@ -2,7 +2,9 @@ using MediatR;
 using MediatR.Pipeline;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Platform.Custom.Drivers;
 using Platform.Custom.Fleet;
+using Platform.Custom.Messaging;
 using Platform.Data;
 
 namespace Platform;
@@ -24,14 +26,33 @@ internal static partial class ProgramHooks
         {
             builder.Services.AddTransient(service, implementation);
         }
+
+        // SMS: Netgsm hesabı .env'de tanımlıysa toplu SMS, değilse log. Şoför davetleri SMS ile bildirilir.
+        var netgsm = builder.Configuration.GetSection("Netgsm");
+        builder.Services.Configure<NetgsmOptions>(netgsm);
+        if (netgsm.Get<NetgsmOptions>()?.IsConfigured == true)
+        {
+            builder.Services.AddHttpClient<ISmsGateway, NetgsmSmsGateway>(c =>
+            {
+                c.BaseAddress = new Uri("https://api.netgsm.com.tr/");
+                c.Timeout = TimeSpan.FromSeconds(15);
+            });
+        }
+        else
+        {
+            builder.Services.AddSingleton<ISmsGateway, LogSmsGateway>();
+        }
+
+        builder.Services.AddScoped<IDriverNotifier, SmsDriverNotifier>();
     }
 
     static partial void ConfigureApp(WebApplication app)
     {
-        // Araç kataloğu + araç özelliği tabloları (CREATE TABLE IF NOT EXISTS) ve başlangıç kataloğu.
+        // Araç kataloğu, araç özelliği ve firma şoförleri tabloları (CREATE TABLE IF NOT EXISTS) ve başlangıç kataloğu.
         using var scope = app.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<PlatformDbContext>();
         db.Database.ExecuteSqlRaw(FleetSchema.Sql);
+        db.Database.ExecuteSqlRaw(TenantDriverSchema.Sql);
         VehicleModelCatalog.SeedAsync(db).GetAwaiter().GetResult();
     }
 }

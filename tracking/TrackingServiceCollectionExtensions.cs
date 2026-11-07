@@ -18,6 +18,7 @@ internal static class TrackingServiceCollectionExtensions
         services.AddScoped<IPingPartitionManager, PingPartitionManager>();
         services.AddScoped<ILocationPingStore, LocationPingStore>();
         services.AddScoped<ITripRouteStore, TripRouteStore>();
+        services.AddScoped<Features.Availability.IDriverAvailabilityStore, Features.Availability.DriverAvailabilityStore>();
         services.AddHostedService<PingPartitionMaintenanceService>();
 
         services.AddSingleton<IStopProgressTracker, StopProgressTracker>();

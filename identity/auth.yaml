@@ -48,7 +48,7 @@ otp:
   codeLength: 6
   lifetimeSeconds: 180
   maxAttempts: 5
-  resendCooldownSeconds: 60
+  resendCooldownSeconds: 180
   maxPerHour: 5
   defaultCountryCode: +90
 messaging:

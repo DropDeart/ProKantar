@@ -67,4 +67,8 @@ public sealed class TenantDriver : BaseEntity
 
     /// <summary>Şoförün yanıt zamanı.</summary>
     public DateTimeOffset? RespondedAt { get; set; }
+
+    /// <summary>Davet linkinin kodu (<c>/davet/{kod}</c>); tahmin edilemez, SMS ve kopyalanan linkte taşınır.</summary>
+    [MaxLength(32)]
+    public string? InviteToken { get; set; }
 }

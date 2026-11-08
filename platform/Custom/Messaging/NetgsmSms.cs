@@ -31,9 +31,6 @@ public sealed class NetgsmOptions
     /// <summary>Netgsm raporlarında görünen uygulama adı.</summary>
     public string? AppName { get; set; } = "ProKantar";
 
-    /// <summary>Şoför uygulamasının indirme linki (davet SMS'inde).</summary>
-    public string AppLink { get; set; } = "https://prokantar.com";
-
     /// <summary>Hesap bilgileri tam mı.</summary>
     public bool IsConfigured =>
         !string.IsNullOrWhiteSpace(Usercode) && !string.IsNullOrWhiteSpace(Password) && !string.IsNullOrWhiteSpace(MsgHeader);

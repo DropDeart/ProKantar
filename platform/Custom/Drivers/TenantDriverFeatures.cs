@@ -18,7 +18,11 @@ public sealed record TenantDriverDto(
     string? FullName,
     string Phone,
     bool? LocationConsent,
-    IReadOnlyList<string> Plates);
+    IReadOnlyList<string> Plates,
+    string? InviteToken);
+
+/// <summary>Davet linkinin açtığı sayfa için özet (oturumsuz): firma, maskeli numara, durum.</summary>
+public sealed record PublicInvitationDto(string TenantName, string Phone, TenantDriverStatus Status, DateTimeOffset InvitedAt);
 
 /// <summary>Şoföre gösterilen davet.</summary>
 public sealed record DriverInvitationDto(Guid Id, string TenantName, DateTimeOffset InvitedAt);
@@ -112,6 +116,43 @@ public sealed class RespondInvitationCommand : ICommand
     public string? VerifiedPhone { get; set; }
 }
 
+/// <summary>Davet linkinden davetin özeti (oturum gerekmez).</summary>
+public sealed class InvitationByTokenQuery : IQuery<PublicInvitationDto>
+{
+    /// <summary>Link kodu.</summary>
+    public string Token { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Davet linkinden kabul/ret. Davet çağıranın şoför kaydına ya da doğrulanmış telefonuna gelmiş olmalı. Şoför profili
+/// yoksa kabulde <see cref="FullName"/> ve doğrulanmış numarayla açılır.
+/// </summary>
+public sealed class RespondInvitationByTokenCommand : ICommand
+{
+    /// <summary>Link kodu.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public string Token { get; set; } = string.Empty;
+
+    /// <summary>Kabul mü.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public bool Accept { get; set; }
+
+    /// <summary>Şoför profili yoksa açılacak profilin adı.</summary>
+    public string? FullName { get; set; }
+
+    /// <summary>Çağıran (controller doldurur).</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public Guid UserId { get; set; }
+
+    /// <summary>Doğrulanmış telefon (token; controller doldurur).</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public string? VerifiedPhone { get; set; }
+}
+
 /// <summary>Davet sorgu yardımcıları.</summary>
 internal static class TenantDrivers
 {
@@ -145,7 +186,7 @@ internal sealed class TenantDriversHandler(PlatformDbContext db) : IQueryHandler
             var driver = r.DriverId is { } id ? drivers.GetValueOrDefault(id) : null;
             var phone = r.Status == TenantDriverStatus.Active ? r.Phone : Phones.Mask(r.Phone);
             return new TenantDriverDto(r.Id, r.Status, r.Source, r.CreatedAt, r.RespondedAt, r.DriverId, driver?.FullName, phone,
-                driver?.LocationConsent, driver?.Plates ?? []);
+                driver?.LocationConsent, driver?.Plates ?? [], r.Status == TenantDriverStatus.Invited ? r.InviteToken : null);
         }).ToList();
     }
 }
@@ -194,11 +235,79 @@ internal sealed class InviteDriverHandler(PlatformDbContext db, IDriverNotifier 
             Status = TenantDriverStatus.Invited,
             Source = request.Source,
             InvitedByUserId = request.UserId,
+            InviteToken = InviteTokens.New(),
         };
         db.TenantDrivers.Add(invitation);
         await db.SaveChangesAsync(cancellationToken);
-        await notifier.InvitedAsync(phone, driver?.UserId, request.TenantName, cancellationToken);
+        await notifier.InvitedAsync(phone, request.TenantName, invitation.InviteToken, cancellationToken);
         return invitation.Id;
+    }
+}
+
+/// <summary>Davet linki kodu: 16 rastgele bayt, URL-güvenli Base64 (22 karakter).</summary>
+internal static class InviteTokens
+{
+    public static string New()
+        => Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+}
+
+internal sealed class InvitationByTokenHandler(PlatformDbContext db) : IQueryHandler<InvitationByTokenQuery, PublicInvitationDto>
+{
+    public async Task<PublicInvitationDto> Handle(InvitationByTokenQuery request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        // Geri çekilen davet linki hiçbir şey göstermez.
+        var row = await db.TenantDrivers.AsNoTracking()
+                .FirstOrDefaultAsync(t => t.InviteToken == request.Token && t.Status != TenantDriverStatus.Removed, cancellationToken)
+            ?? throw new NotFoundException("Davet", request.Token);
+        return new PublicInvitationDto(row.TenantName, Phones.Mask(row.Phone), row.Status, row.CreatedAt);
+    }
+}
+
+internal sealed class RespondInvitationByTokenHandler(PlatformDbContext db) : ICommandHandler<RespondInvitationByTokenCommand>
+{
+    public async Task Handle(RespondInvitationByTokenCommand request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var invitation = await db.TenantDrivers
+                .FirstOrDefaultAsync(t => t.InviteToken == request.Token && t.Status != TenantDriverStatus.Removed, cancellationToken)
+            ?? throw new NotFoundException("Davet", request.Token);
+        if (invitation.Status != TenantDriverStatus.Invited)
+        {
+            throw new ValidationException("Invitation", invitation.Status == TenantDriverStatus.Active ? "Bu davet zaten kabul edildi." : "Bu davet yanıtlandı.");
+        }
+
+        var driver = await db.Drivers.FirstOrDefaultAsync(d => d.UserId == request.UserId, cancellationToken);
+        var phone = request.VerifiedPhone is null ? null : Phones.Key(request.VerifiedPhone);
+        var mine = (driver is not null && invitation.DriverId == driver.Id) || (phone is not null && phone == invitation.Phone);
+        if (!mine)
+        {
+            throw new ValidationException("Phone",
+                $"Bu davet {Phones.Mask(invitation.Phone)} numarasına gönderildi. Daveti kabul etmek için bu numarayı hesabınızda doğrulayın.");
+        }
+
+        if (request.Accept && driver is null)
+        {
+            var fullName = request.FullName?.Trim();
+            if (string.IsNullOrEmpty(fullName) || fullName.Length < 3)
+            {
+                throw new ValidationException(nameof(request.FullName), "Şoför profiliniz için adınızı ve soyadınızı girin.");
+            }
+
+            // Aynı numarayla başka kullanıcının şoför profili varsa davet ona aittir; ikinci profil açılmaz.
+            if (await db.Drivers.AnyAsync(d => d.Phone == invitation.Phone && d.IsActive, cancellationToken))
+            {
+                throw new ValidationException("Phone", "Bu numarayla kayıtlı başka bir şoför profili var.");
+            }
+
+            driver = new Driver { UserId = request.UserId, FullName = fullName, Phone = invitation.Phone, IsActive = true };
+            db.Drivers.Add(driver);
+        }
+
+        invitation.DriverId = driver?.Id ?? invitation.DriverId;
+        invitation.Status = request.Accept ? TenantDriverStatus.Active : TenantDriverStatus.Declined;
+        invitation.RespondedAt = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync(cancellationToken);
     }
 }
 

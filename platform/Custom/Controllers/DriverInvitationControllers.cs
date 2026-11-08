@@ -43,6 +43,39 @@ public sealed class TenantDriversController : CallerController
     }
 }
 
+/// <summary>Davet linki (<c>/davet/{kod}</c>): özet herkese açık, yanıt için oturum ve doğrulanmış numara gerekir.</summary>
+[Authorize]
+[Route("api/invitations")]
+public sealed class InvitationLinksController : CallerController
+{
+    /// <summary>Davetin özeti: firma, maskeli numara, durum.</summary>
+    [HttpGet("{token}")]
+    [AllowAnonymous]
+    public async Task<ActionResult<PublicInvitationDto>> Get(string token, CancellationToken cancellationToken)
+        => Ok(await Mediator.Send(new InvitationByTokenQuery { Token = token }, cancellationToken));
+
+    /// <summary>Daveti kabul eder; şoför profili yoksa adla açılır.</summary>
+    [HttpPost("{token}/accept")]
+    public Task<IActionResult> Accept(string token, RespondInvitationByTokenCommand command, CancellationToken cancellationToken)
+        => Respond(token, true, command, cancellationToken);
+
+    /// <summary>Daveti reddeder.</summary>
+    [HttpPost("{token}/decline")]
+    public Task<IActionResult> Decline(string token, CancellationToken cancellationToken)
+        => Respond(token, false, new RespondInvitationByTokenCommand(), cancellationToken);
+
+    private async Task<IActionResult> Respond(string token, bool accept, RespondInvitationByTokenCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        command.Token = token;
+        command.Accept = accept;
+        command.UserId = UserId;
+        command.VerifiedPhone = VerifiedPhone;
+        await Mediator.Send(command, cancellationToken);
+        return NoContent();
+    }
+}
+
 /// <summary>Şoförün firma davetleri (mobil).</summary>
 [Authorize(Roles = "Driver")]
 [Route("api/me/invitations")]

@@ -27,5 +27,8 @@ public static class TenantDriverSchema
         CREATE UNIQUE INDEX IF NOT EXISTS "UX_TenantDrivers_Open" ON "TenantDrivers" ("TenantId", "Phone")
             WHERE "Status" IN ('Invited', 'Active') AND NOT "IsDeleted";
         CREATE INDEX IF NOT EXISTS "IX_Drivers_Phone" ON "Drivers" ("Phone");
+        ALTER TABLE "TenantDrivers" ADD COLUMN IF NOT EXISTS "InviteToken" character varying(32) NULL;
+        UPDATE "TenantDrivers" SET "InviteToken" = substr(md5(random()::text || "Id"::text), 1, 32) WHERE "InviteToken" IS NULL;
+        CREATE UNIQUE INDEX IF NOT EXISTS "UX_TenantDrivers_InviteToken" ON "TenantDrivers" ("InviteToken");
         """;
 }

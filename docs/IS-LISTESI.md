@@ -18,7 +18,7 @@ Repolar: `DropDeart/ProKantar` (backend) ve `DropDeart/ProKantarUI` (ön yüz).
 **Yeni bilgisayarda yapılacaklar:**
 1. `.env` dosyaları git'te yok (secret). `identity/.env` ve `platform/.env`'i eski makineden taşı ya da `.env.example`'dan yeniden doldur:
    - identity: `Auth__Messaging__SmsProvider=Netgsm`, `Auth__Messaging__Netgsm__Usercode=8505103285`, `..._Password=<API alt kullanıcısı şifresi>`, `..._MsgHeader=<onaylı başlık>`.
-   - platform: `Netgsm__Usercode`, `Netgsm__Password`, `Netgsm__MsgHeader` (+ isteğe bağlı `Netgsm__AppLink`, uygulama mağaza linki çıkınca). Şifre boşsa SMS'ler log'a yazılır.
+   - platform: `Netgsm__Usercode`, `Netgsm__Password`, `Netgsm__MsgHeader`; davet linkinin web adresi `Invitations__WebUrl` (SMS: `{WebUrl}/davet/{kod}`). Şifre boşsa SMS'ler log'a yazılır.
    - **Başlık onaylanana kadar identity'de `SmsProvider=Log` bırak**; Netgsm seçiliyken başlık geçersizse OTP gönderimi hata verir (giriş çalışmaz).
    - API'de IP kısıtı açılırsa yeni makinenin dış IP'si Netgsm paneline eklenmeli (yoksa kod 30).
 2. Başlık onaylanınca: msgheader sorgula → `.env`'lere yaz → `docker compose up -d --build identity platform` → kendi numarana OTP (`POST /api/account/otp/send`) ve telefonla şoför daveti (panel `/panel/soforler`) ile uçtan uca dene.

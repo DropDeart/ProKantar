@@ -50,6 +50,7 @@ internal static partial class ProgramHooks
             builder.Services.AddSingleton<ISmsGateway, LogSmsGateway>();
         }
 
+        builder.Services.Configure<InvitationOptions>(builder.Configuration.GetSection("Invitations"));
         builder.Services.AddScoped<IDriverNotifier, SmsDriverNotifier>();
     }
 

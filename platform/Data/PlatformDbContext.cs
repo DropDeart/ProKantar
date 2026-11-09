@@ -33,6 +33,18 @@ public sealed class PlatformDbContext : BaseForgeDbContext
     /// <summary>TenantDriver tablosu (elle eklendi: firma şoförleri/davetleri, Custom/Drivers).</summary>
     public DbSet<TenantDriver> TenantDrivers => Set<TenantDriver>();
 
+    /// <summary>Şoför bildirimleri (elle eklendi: irsaliye bildirim zinciri, Custom/Notifications).</summary>
+    public DbSet<DriverNotification> DriverNotifications => Set<DriverNotification>();
+
+    /// <summary>Şoför bildirimlerinin kanal denemeleri (elle eklendi, Custom/Notifications).</summary>
+    public DbSet<DriverNotificationAttempt> DriverNotificationAttempts => Set<DriverNotificationAttempt>();
+
+    /// <summary>Firma bildirimleri (elle eklendi: zil, Custom/Notifications).</summary>
+    public DbSet<TenantNotification> TenantNotifications => Set<TenantNotification>();
+
+    /// <summary>Kullanıcının bildirimlere son bakışı (elle eklendi, Custom/Notifications).</summary>
+    public DbSet<TenantNotificationCursor> TenantNotificationCursors => Set<TenantNotificationCursor>();
+
     /// <summary>
     /// Enum alanlar veritabanında sayı değil, değer adıyla (string) saklanır — enum'a değer eklenip sırası
     /// değişse de var olan kayıtlar bozulmaz ve DB okunabilir kalır.
@@ -45,5 +57,9 @@ public sealed class PlatformDbContext : BaseForgeDbContext
         configurationBuilder.Properties<VehicleBodyType>().HaveConversion<string>();
         configurationBuilder.Properties<TenantDriverStatus>().HaveConversion<string>();
         configurationBuilder.Properties<TenantDriverSource>().HaveConversion<string>();
+        configurationBuilder.Properties<DriverNotificationStatus>().HaveConversion<string>();
+        configurationBuilder.Properties<DriverNotificationChannel>().HaveConversion<string>();
+        configurationBuilder.Properties<DriverNotificationResult>().HaveConversion<string>();
+        configurationBuilder.Properties<TenantNotificationKind>().HaveConversion<string>();
     }
 }

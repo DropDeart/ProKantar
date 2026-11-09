@@ -1,6 +1,6 @@
 # ProKantar iş listesi
 
-Son güncelleme: 07.11.2026. Bu dosya kaldığımız yeri ve sıradaki işleri tutar; yeni bir oturuma buradan başlanır.
+Son güncelleme: 09.11.2026. Bu dosya kaldığımız yeri ve sıradaki işleri tutar; yeni bir oturuma buradan başlanır.
 Repolar: `DropDeart/ProKantar` (backend) ve `DropDeart/ProKantarUI` (ön yüz).
 
 ---
@@ -31,6 +31,34 @@ Repolar: `DropDeart/ProKantar` (backend) ve `DropDeart/ProKantarUI` (ön yüz).
 
 ---
 
+## 0.1 Sevkiyat zinciri ve simülasyon (09.11) — commit'lenmedi
+
+Yapıldı ve simülasyonla uçtan uca doğrulandı (iki duraklı / tek duraklı, %5 sapma, push dalı):
+- kantar: çıkış tartımı plakadan yayındaki sevkiyata bağlanır; malzeme, cari, şoför plandan gelir; plana bağlı tartımda başka
+  malzeme reddedilir, plansızda malzeme zorunlu (`Custom/Weighings/WeighingShipmentLink.cs`, `CreateWeighingGuard`).
+- kantar: teslimat durağı başına irsaliye; satırlar durağın yükünden (tek durak + tek satır + kg/ton → gerçek net, aksi halde plan);
+  net ile plan toplamı %2'den fazla saparsa ön izlemede uyarı. Benzersiz indeks (tartım, teslim noktası) oldu
+  (`UX_Waybills_TenantId_WeighingId_Location_Valid`). Uçlar: `GET Weighings/{id}/despatches`, `GET Shipments/{id}/progress`.
+- kantar: `kantar/WaybillIssued` olayı + giriş istemeyen süreli link `{WebUrl}/irsaliye/{token}` (43 karakterlik HMAC token, anahtar
+  `EDespatchSecrets`'te DataProtection ile şifreli; 30 gün), `GET api/public/waybills/{token}`.
+- platform: RabbitMQ aboneliği + şoför bildirim zinciri: SignalR hub `/hubs/driver` (Driver rolü, `?access_token=`, 10 sn "Ack")
+  → push (`IPushSender`, şimdilik log) → SMS (`ISmsGateway`, irsaliye linkli). Her deneme `DriverNotificationAttempts`'e yazılır.
+  Uçlar: `GET api/DriverNotifications?shipmentId=`, şoför: `GET api/me/notifications`, `POST api/me/notifications/{id}/ack`.
+- UI: tartım ayrıntısında durak başına "İrsaliye kes" (uyarılarla); sevkiyat detayında "Yük ve irsaliyeler" kartı (plan/tartılan/fark,
+  tartımlar, durak irsaliyesi, bildirim zinciri); `/irsaliye/[token]` (giriş istemez, mobil); `/panel/simulasyon` (yalnız dev:
+  şoför uygulaması + kantar cihazı yerine). Bireysel kayıtta "Şoförüm" seçeneği (Driver rolü + profil).
+- Betik: `tools/simulate/yerel_firma_hazirla.py` (yerel test firması; onay yerel DB'de SQL ile) ve
+  `tools/simulate/sevkiyat_simulasyonu.py [--sapma 0.05] [--push] [--tek-durak]`.
+
+Kalanlar:
+- [ ] İrsaliye çıkış tartımından sonra **otomatik** kesilmiyor (karar 06.11); şimdilik tartım ayrıntısından elle. Otomatik kesimde
+  GİB eksikleri (TCKN, posta kodu) olursa ne olacağı kararlaştırılmalı.
+- [ ] FCM bağlantısı (push gerçek gönderim); `LogPushSender` yerine.
+- [ ] Platform birden çok kopyaya çıkarsa SignalR için Redis backplane; `DriverPresence` kopya içi.
+- [ ] Kayıtta şoför profili SMS doğrulamasından önce kayıttaki numarayla açılıyor: başkasının numarasıyla kayıt o numaranın davet
+  kabulünü engelleyebilir. Profil telefonu doğrulanmış `phone_number` ile eşleşmeli.
+- [ ] Sosyal girişle bireysel kayıt şoför rolü vermiyor.
+
 ## 1. Sıradaki iş: sevkiyat yükü ve kantarın sevkiyattan beslenmesi (KARARLAŞTI)
 
 Kullanıcı kararları (05.11):
@@ -58,9 +86,9 @@ Yapılacaklar (öneri):
 
 - [x] kantar: `ShipmentStopLine` (elle, `Custom/Shipments/`; malzeme kod/ad snapshot, miktar, birim) + plan komutunda durak başına `lines` + `GET api/Shipments/{id}/loads`. Çıkış sevkiyatında yüksüz teslimat durağı yayınlanamaz. Toplam yük (kg'a çevrilerek) kantar durağı istasyonundaki en büyük aktif kantarın kapasitesini aşamaz; kayıtta ve yayında denetlenir (`ShipmentLoadCapacity`). Tablo açılışta `ShipmentLoadSchema` ile kurulur (06.11).
 - [x] UI: `ShipmentForm` → `StopsEditor` içinde durak başına yük satırları (`StopLoadsEditor`); malzeme seçilince birim gelir, düzenlemede yükler geri yüklenir (06.11).
-- [ ] Kantar: plaka ile sevkiyata bağlanan tartımda malzeme plandan gelir. Tartım ekranında malzeme seçimi kaldırılır ya da salt okunur yapılır.
-- [ ] İrsaliye satırları: tartımın malzemesinden değil, sevkiyat durağının yük satırlarından kurulur (`kantar/Custom/EDespatch/Issuing/DespatchDraftBuilder.cs`). Teslimat durağı başına bir irsaliye kesilir, `ShipmentStop.WaybillId` doldurulur.
-- [ ] Sevkiyat detayında planlanan ve tartılan miktar yan yana gösterilir.
+- [x] Kantar: plaka ile sevkiyata bağlanan tartımda malzeme plandan gelir (09.11; arayüzde tartım oluşturma ekranı yok, kantar API'den).
+- [x] İrsaliye satırları sevkiyat durağının yük satırlarından; teslimat durağı başına bir irsaliye, `ShipmentStop.WaybillId` (09.11).
+- [x] Sevkiyat detayında planlanan ve tartılan miktar yan yana (09.11).
 - [x] Araç kataloğu + "Araçlarımız" (06.11). Uygun ücretsiz API yok (NHTSA vPIC ABD odaklı, ağırlığı sınıf aralığı veriyor; AB yakıt verisi VECTO kapalı), kendi kataloğumuz:
   - platform `VehicleModel` (marka, model, yapı, dingil, azami yüklü ağırlık, tipik dara, ort. yakıt; onaylı/öneri) — açılışta 44 modellik başlangıç kataloğu (`VehicleModelCatalog`, tipik değerler, Türkiye dingil sınırına göre)
   - platform `VehicleSpec` (araç 1-1: model, ruhsattaki azami ağırlık, `FleetTenantId`); generate edilen `Vehicle`'a dokunulmadı
@@ -84,12 +112,12 @@ Yapılacaklar (öneri):
 - [ ] Sevkiyat formunda şoför aramasında önce Şoförlerimiz gelsin.
 - [x] Netgsm OTP SMS (06.11): identity `NetgsmSmsSender` (`sms/rest/v2/otp`, Basic Auth); `Auth__Messaging__SmsProvider=Netgsm` + Usercode/Password/MsgHeader `.env`'de. Metin Türkçe karaktersize çevrilir, ≤155 karakter, yalnız TR cep. Gerçek gönderim gönderici adı onayını bekliyor (bkz. §0).
 - [x] Davet SMS'i (06.11): platform `ISmsGateway` → `NetgsmSmsGateway` (`sms/rest/v2/send`, n:n toplu, `encoding=TR`, `iysfilter=0`); `Netgsm__*` .env'de yoksa `LogSmsGateway`. `SmsDriverNotifier` push gelene kadar kayıtlı/kayıtsız her davete SMS atar; SMS hatası daveti bozmaz. Gerçek gönderim gönderici adı onayını bekliyor (bkz. §0).
-- [ ] İrsaliye linki SMS'i aynı `ISmsGateway` ile; push (FCM).
+- [x] İrsaliye linki SMS'i aynı `ISmsGateway` ile (09.11); push arayüzü hazır, FCM bağlanmadı.
 - [ ] **Mobil:** şoför araç eklerken `VehicleModels/brands` → `VehicleModels?brand=` → `PUT Vehicles/{id}/spec`; listede yoksa `POST VehicleModels/suggestions`.
 - [ ] Yönetici paneli: onay bekleyen model önerileri (`GET VehicleModels?pending=true` + `PUT VehicleModels/{id}`).
 - [ ] Araç kapasitesi denetimi: kantar, platformdan aracın azami yüklü ağırlığını (gRPC) alıp planlanan yük + kayıtlı dara (`TenantVehicle.StoredTareKg`) ile karşılaştırsın; çıkış tartımında ölçülen brüt azami ağırlığı aşarsa engel/uyarı (karar bekliyor). `VehicleType.maxGrossKg` bununla gereksizleşiyor.
 - [ ] Katalog değerleri tipik; yasal dingil sınırları (18/26/32/40 t) yönetmelikten teyit edilmeli.
-- [ ] Şoför bildirim zinciri: kantar `kantar/WaybillIssued` olayı → platform SignalR (ack) → push → SMS ile imzalı irsaliye linki.
+- [x] Şoför bildirim zinciri: kantar `kantar/WaybillIssued` olayı → platform SignalR (ack) → push → SMS ile imzalı irsaliye linki (09.11).
 - [ ] Tanımlara yazıcı (isteğe bağlı).
 
 ## 2. Unutulmuş iş: yol haritası ve tahmini varış süresi
@@ -125,13 +153,17 @@ Açık kalanlar:
 - [ ] **Servis hesabı şifresi.** identity `.env` → `Auth__Clients__2__Secret` ile kantar `.env` → `Auth__ServiceClient__ClientSecret` aynı değer olmalı (`kantar-service` istemcisi). Girilmezse irsaliye keserken 500 döner.
 - [ ] **Proxy ağı.** Servisler nginx/Docker arkasındaysa `ForwardedHeaders__KnownNetworks__0=<proxy ağı>` girilmeli (identity ve platform). Girilmezse bütün kullanıcılar tek bir deneme sınırını paylaşır.
 - [ ] **identity portu.** `identity/docker-compose.yml` 8081'i bütün arayüzlere açıyor (`127.0.0.1:` önekiyle kısıtlanmalı).
+- [ ] **platform artık RabbitMQ'ya bağlı:** `platform/.env`'de `RABBITMQ_PASSWORD` (kökteki broker ile aynı). İrsaliye linkinin
+  web adresi kantar'da `WEB_URL` (→ `WaybillLinks__WebUrl`), davet linki platformda `Invitations__WebUrl`.
+- [ ] **SignalR arkasında proxy:** nginx'te `/hubs/driver` için WebSocket upgrade başlıkları (`Upgrade`, `Connection`) açılmalı.
 - [ ] **Yeniden başlatma sırası:** identity ve platform → kantar → tracking. Tracking önce kalkarsa sefer durumu olayları kaybolur.
 - [ ] Eski "Yayında" sevkiyatlar sefer durumuyla otomatik güncellenmez; tek seferlik SQL gerekebilir.
 - [ ] Yeni kolonlar ve tablolar servis açılışında idempotent SQL ile kuruluyor (EnsureCreated var olan DB'ye eklemez).
 - [ ] **Regen riski.** Üretici yeniden çalışırsa şu elle değişiklikler ezilir ve yeniden uygulanmalı:
   - kantar: `Kantar.csproj`, `Data/KantarDbContext.cs` (`ShipmentStopLines` DbSet dahil), üretilmiş Entity/Dto/Command dosyalarına eklenen alanlar
   - identity: `Program.cs`, `Controllers/AuthorizationController.cs` (`phone_number` claim'i), `Messaging/MessagingRegistration.cs` + `Configuration/AuthOptions.cs` (Netgsm sağlayıcısı; `Messaging/NetgsmSmsSender.cs` elle yazıldı)
-  - platform: `Program.cs`, `Grpc/DriverGrpcService.cs`, `Data/PlatformDbContext.cs` (`VehicleModels`/`VehicleSpecs`/`TenantDrivers` DbSet + enum dönüşümleri)
+  - platform: `Program.cs` (09.11: `EnableRabbitMq` + `kantar/WaybillIssued` aboneliği), `Grpc/DriverGrpcService.cs`, `Data/PlatformDbContext.cs`
+    (`VehicleModels`/`VehicleSpecs`/`TenantDrivers`/`DriverNotifications`/`DriverNotificationAttempts` DbSet + enum dönüşümleri)
 
 ## 5. Diğer açık işler
 
@@ -151,6 +183,9 @@ Açık kalanlar:
 - [ ] Production'da Nominatim yerine ücretli bir adres/konum sağlayıcısı.
 
 ## 6. Yerel test notları
+
+- Simülasyon: önce `python tools/simulate/yerel_firma_hazirla.py` (bir kez; `tools/simulate/.env.local` yazar), sonra
+  `python tools/simulate/sevkiyat_simulasyonu.py`. Panelde aynı akış: `/panel/simulasyon` (şoför + kantar) ve Sevkiyatlar.
 
 - Demo kiracı: `E2E Lojistik 1793804329539`, tenant `49bc6b5d-bf9a-4d8e-b635-5f99f47ea5e0`, e-posta `e2e1793804329539@test.com` (şifre seed / test notlarında).
 - Demo şoförler: Mehmet Yılmaz ve Ayşe Demir, deneme amaçlı geçerli test TCKN'leri girili. Plaka 41KL4471'e ikisi de bağlı.

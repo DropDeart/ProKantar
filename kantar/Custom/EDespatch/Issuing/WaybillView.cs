@@ -21,8 +21,11 @@ public sealed record WaybillView
     /// <summary>Düzenleme anı.</summary>
     public DateTimeOffset IssuedAt { get; init; }
 
-    /// <summary>Miktar (net kg).</summary>
+    /// <summary>Miktar (kg karşılığı; çok duraklı sevkiyatta durağın planı).</summary>
     public decimal? QuantityKg { get; init; }
+
+    /// <summary>Teslim noktası (sevkiyatlı tartımda durağın noktası).</summary>
+    public Guid? DeliveryLocationId { get; init; }
 
     /// <summary>Tartım.</summary>
     public Guid WeighingId { get; init; }
@@ -78,6 +81,23 @@ public static class WaybillViews
         => await FindAsync(db, db.Waybills.Where(w => w.Id == waybillId), ct)
            ?? throw new NotFoundException(nameof(Waybill), waybillId);
 
+    /// <summary>Tartımın bütün irsaliyeleri (çok duraklı sevkiyatta durak başına bir tane), düzenleme sırasıyla.</summary>
+    public static async Task<IReadOnlyList<WaybillView>> ListByWeighingAsync(KantarDbContext db, Guid weighingId, CancellationToken ct)
+    {
+        var ids = await db.Waybills.AsNoTracking()
+            .Where(w => w.WeighingId == weighingId)
+            .OrderBy(w => w.IssuedAt)
+            .Select(w => w.Id)
+            .ToListAsync(ct);
+        var views = new List<WaybillView>(ids.Count);
+        foreach (var id in ids)
+        {
+            views.Add(await GetAsync(db, id, ct));
+        }
+
+        return views;
+    }
+
     /// <summary>Tartımın irsaliyesi: önce geçerli olan, yoksa en son reddedilen; hiç yoksa null.</summary>
     public static Task<WaybillView?> FindByWeighingAsync(KantarDbContext db, Guid weighingId, CancellationToken ct)
         => FindAsync(db, db.Waybills
@@ -97,6 +117,7 @@ public static class WaybillViews
                     WaybillType = w.WaybillType,
                     IssuedAt = w.IssuedAt,
                     QuantityKg = w.QuantityKg,
+                    DeliveryLocationId = w.DeliveryLocationId,
                     WeighingId = w.WeighingId,
                     DeliveryAddress = w.DeliveryAddress,
                     Plate = w.Plate,

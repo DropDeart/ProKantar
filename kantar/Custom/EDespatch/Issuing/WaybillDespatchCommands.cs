@@ -12,6 +12,22 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Kantar.Custom.EDespatch.Issuing;
 
+/// <summary>Tartımın bütün irsaliyeleri (durak başına).</summary>
+public sealed class ListWeighingDespatchesQuery : IQuery<IReadOnlyList<WaybillView>>
+{
+    /// <summary>Tartım.</summary>
+    public Guid WeighingId { get; set; }
+}
+
+internal sealed class ListWeighingDespatchesHandler(KantarDbContext db) : IQueryHandler<ListWeighingDespatchesQuery, IReadOnlyList<WaybillView>>
+{
+    public Task<IReadOnlyList<WaybillView>> Handle(ListWeighingDespatchesQuery request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return WaybillViews.ListByWeighingAsync(db, request.WeighingId, cancellationToken);
+    }
+}
+
 /// <summary>Tartımın irsaliyesi; yoksa null (404).</summary>
 public sealed class GetWeighingDespatchQuery : IQuery<WaybillView?>
 {
@@ -98,7 +114,8 @@ internal sealed class GetWaybillUblHandler(KantarDbContext db) : IQueryHandler<G
 }
 
 internal sealed class RefreshWaybillStatusHandler(
-    KantarDbContext db, IUnitOfWork unitOfWork, ICurrentTenant currentTenant, EDespatchSettingsStore settings, IEDespatchProviderRegistry registry)
+    KantarDbContext db, IUnitOfWork unitOfWork, ICurrentTenant currentTenant, EDespatchSettingsStore settings, IEDespatchProviderRegistry registry,
+    Notices.TenantNotices notices)
     : ICommandHandler<RefreshWaybillStatusCommand, WaybillView>
 {
     public async Task<WaybillView> Handle(RefreshWaybillStatusCommand request, CancellationToken cancellationToken)
@@ -114,7 +131,12 @@ internal sealed class RefreshWaybillStatusHandler(
 
             var config = await settings.ResolveAsync(currentTenant.RequireTenantId(), cancellationToken);
             var result = await registry.Get(EDespatchProviderKind.ELogo).GetStatusAsync(ettn, config.Credentials, cancellationToken);
+            var rejectedBefore = waybill.EDespatchStatus == WaybillEDespatchStatus.Rejected;
             WaybillStates.ApplyStatus(waybill, result, DateTimeOffset.UtcNow);
+            if (rejectedBefore is false && waybill.EDespatchStatus == WaybillEDespatchStatus.Rejected)
+            {
+                await notices.WaybillRejectedAsync(waybill.TenantId, waybill.Id, waybill.WeighingId, waybill.WaybillNo, waybill.EDespatchMessage, CancellationToken.None);
+            }
             await unitOfWork.SaveChangesAsync(cancellationToken);
         }
 
@@ -122,7 +144,8 @@ internal sealed class RefreshWaybillStatusHandler(
     }
 }
 
-internal sealed class MarkWaybillHandler(KantarDbContext db, IUnitOfWork unitOfWork) : ICommandHandler<MarkWaybillCommand, WaybillView>
+internal sealed class MarkWaybillHandler(KantarDbContext db, IUnitOfWork unitOfWork, Notices.TenantNotices notices)
+    : ICommandHandler<MarkWaybillCommand, WaybillView>
 {
     public async Task<WaybillView> Handle(MarkWaybillCommand request, CancellationToken cancellationToken)
     {
@@ -149,6 +172,11 @@ internal sealed class MarkWaybillHandler(KantarDbContext db, IUnitOfWork unitOfW
         waybill.EDespatchMessage = string.IsNullOrWhiteSpace(request.Note) ? "Durum elle işaretlendi." : request.Note.Trim();
         waybill.EDespatchCheckedAt = now;
         waybill.EDespatchSentAt ??= target is WaybillEDespatchStatus.Sent or WaybillEDespatchStatus.Delivered ? now : null;
+        if (target == WaybillEDespatchStatus.Rejected)
+        {
+            await notices.WaybillRejectedAsync(waybill.TenantId, waybill.Id, waybill.WeighingId, waybill.WaybillNo, waybill.EDespatchMessage, cancellationToken);
+        }
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return await WaybillViews.GetAsync(db, waybill.Id, cancellationToken);
     }

@@ -33,6 +33,8 @@ services:
       RabbitMq__Password: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD .env dosyasinda tanimli olmali}
       Auth__ServiceClient__ClientSecret: ${Auth__ServiceClient__ClientSecret:-}
       Cors__AllowedOrigins__0: ${CORS_ORIGIN:-http://localhost:3000}
+      # Şoföre giden irsaliye linkinin web adresi: {WebUrl}/irsaliye/{token} (giriş istemez, 30 gün geçerli).
+      WaybillLinks__WebUrl: ${WEB_URL:-http://localhost:3000}
       # Prod'da: Identity'nin gerçek adresi ve onun Auth__Issuer değeri (yedek issuer — Identity yeniden
       # başlarken oluşabilecek 401'leri önler). Boşsa Program.cs'deki varsayılan/metadata kullanılır.
       # Auth__Authority: "https://identity.ornek.com"

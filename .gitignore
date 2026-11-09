@@ -22,3 +22,7 @@ obj/
 
 # Identity şirket belgeleri (yerel çalıştırma)
 identity/data/
+
+# Simülasyon betiğinin yerel test firması bilgileri
+tools/simulate/.env.local
+tools/simulate/__pycache__/

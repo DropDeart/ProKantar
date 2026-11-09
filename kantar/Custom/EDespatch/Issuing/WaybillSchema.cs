@@ -27,7 +27,10 @@ public static class WaybillSchema
             ADD COLUMN IF NOT EXISTS "District" character varying(50) NULL,
             ADD COLUMN IF NOT EXISTS "PostalCode" character varying(5) NULL;
         ALTER TABLE "Shipments" ADD COLUMN IF NOT EXISTS "CancelReason" character varying(250) NULL;
-        CREATE UNIQUE INDEX IF NOT EXISTS "UX_Waybills_TenantId_WeighingId_Valid" ON "Waybills" ("TenantId", "WeighingId")
+        -- Çok duraklı sevkiyatta tartım başına durak sayısı kadar irsaliye: geçerli irsaliye (tartım, teslim noktası) başına bir.
+        DROP INDEX IF EXISTS "UX_Waybills_TenantId_WeighingId_Valid";
+        CREATE UNIQUE INDEX IF NOT EXISTS "UX_Waybills_TenantId_WeighingId_Location_Valid"
+            ON "Waybills" ("TenantId", "WeighingId", COALESCE("DeliveryLocationId", '00000000-0000-0000-0000-000000000000'::uuid))
             WHERE NOT "IsDeleted" AND "EDespatchStatus" IS DISTINCT FROM 'Rejected';
         CREATE UNIQUE INDEX IF NOT EXISTS "UX_Waybills_TenantId_WaybillNo" ON "Waybills" ("TenantId", "WaybillNo")
             WHERE NOT "IsDeleted";

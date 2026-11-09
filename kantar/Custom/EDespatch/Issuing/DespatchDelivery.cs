@@ -13,7 +13,8 @@ namespace Kantar.Custom.EDespatch.Issuing;
 /// yukarı çıkmaz: irsaliye <see cref="WaybillEDespatchStatus.Failed"/> kalır, <c>resend</c> ile yeniden denenir.
 /// </summary>
 public sealed class DespatchDelivery(
-    IEDespatchProviderRegistry registry, EDespatchSettingsStore settings, IUnitOfWork unitOfWork, ILogger<DespatchDelivery> logger)
+    IEDespatchProviderRegistry registry, EDespatchSettingsStore settings, IUnitOfWork unitOfWork, Notices.TenantNotices notices,
+    ILogger<DespatchDelivery> logger)
 {
     /// <summary>Belgeyi gönderir; istemci bağlantıyı kesse de sonuç yazılsın diye iptal belirteci kullanılmaz.</summary>
     public async Task SendAsync(Waybill waybill, DespatchDocument document, byte[] ublXml, EDespatchCredentials credentials)
@@ -32,7 +33,12 @@ public sealed class DespatchDelivery(
             result = new DespatchSendResult(DespatchState.Failed, ex is BaseException ? ex.Message : "Gönderim sırasında hata oluştu; tekrar deneyin.");
         }
 
+        var rejectedBefore = waybill.EDespatchStatus == WaybillEDespatchStatus.Rejected;
         WaybillStates.ApplySend(waybill, result, DateTimeOffset.UtcNow);
+        if (rejectedBefore is false && waybill.EDespatchStatus == WaybillEDespatchStatus.Rejected)
+        {
+            await notices.WaybillRejectedAsync(waybill.TenantId, waybill.Id, waybill.WeighingId, waybill.WaybillNo, waybill.EDespatchMessage, CancellationToken.None);
+        }
         await unitOfWork.SaveChangesAsync(CancellationToken.None);
     }
 

@@ -10,7 +10,7 @@ namespace Kantar.Custom.Tracking;
 /// Sefer yola çıkınca sevkiyatı <see cref="ShipmentStatus.InProgress"/>, bitince <see cref="ShipmentStatus.Completed"/>
 /// yapar. Durum yalnız ileri gider: tekrar ya da sırasız gelen olay etkisizdir, iptal/taslak sevkiyata dokunulmaz.
 /// </summary>
-internal sealed class SyncShipmentOnTripStatusChanged(KantarDbContext db, IUnitOfWork unitOfWork)
+internal sealed class SyncShipmentOnTripStatusChanged(KantarDbContext db, IUnitOfWork unitOfWork, Notices.TenantNotices notices)
     : INotificationHandler<TripStatusChangedEvent>
 {
     public async Task Handle(TripStatusChangedEvent notification, CancellationToken cancellationToken)
@@ -32,6 +32,11 @@ internal sealed class SyncShipmentOnTripStatusChanged(KantarDbContext db, IUnitO
         if (shipment is not null && CanAdvance(shipment.Status, target))
         {
             shipment.Status = target;
+            if (target == ShipmentStatus.Completed)
+            {
+                await notices.ShipmentCompletedAsync(shipment.TenantId, shipment.Id, shipment.ShipmentNo, shipment.Plate, cancellationToken);
+            }
+
             await unitOfWork.SaveChangesAsync(cancellationToken);
         }
 

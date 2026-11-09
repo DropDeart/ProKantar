@@ -1,5 +1,7 @@
 using BaseForge.Core.Exceptions;
+using Kantar.Data;
 using Kantar.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace Kantar.Custom.EDespatch.Issuing;
 
@@ -60,6 +62,23 @@ public static class DespatchEligibility
 {
     /// <summary>Kesilmiş irsaliye hata mesajı.</summary>
     public const string AlreadyIssued = "Bu tartıma irsaliye kesilmiş.";
+
+    /// <summary>
+    /// Tartımın geçerli irsaliyesi var mı? Sevkiyatlı tartımda her teslimat durağına ayrı irsaliye kesildiği için
+    /// yalnız o durağın irsaliyesine bakılır.
+    /// </summary>
+    public static async Task<bool> HasValidWaybillAsync(KantarDbContext db, Guid weighingId, Guid? stopId, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(db);
+        var query = db.Waybills.Where(w => w.WeighingId == weighingId);
+        if (stopId is { } id)
+        {
+            var waybillId = await db.ShipmentStops.Where(s => s.Id == id).Select(s => s.WaybillId).FirstOrDefaultAsync(ct);
+            query = query.Where(w => w.Id == waybillId);
+        }
+
+        return await query.AnyAsync(WaybillStates.IsValid, ct);
+    }
 
     /// <summary>Yalnız tamamlanmış çıkış tartımı, geçerli irsaliyesi yoksa.</summary>
     public static IReadOnlyList<DespatchRuleError> Check(Weighing weighing, bool hasValidWaybill)

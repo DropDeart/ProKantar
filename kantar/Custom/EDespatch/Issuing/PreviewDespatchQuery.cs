@@ -25,9 +25,11 @@ public sealed class PreviewDespatchQuery : IQuery<DespatchPreview>
 /// <param name="Errors">Alan bazında eksikler (POST'un 400 anahtarlarıyla aynı).</param>
 /// <param name="DriverNationalIdRequired">Platformda TCKN yok; operatör girmeli.</param>
 /// <param name="Document">Belge özeti.</param>
+/// <param name="Warnings">Kesmeyi engellemeyen uyarılar (net ile plan toplamı farkı vb.).</param>
+/// <param name="ShipmentStopId">Sevkiyatlı tartımda irsaliyenin kesileceği teslimat durağı.</param>
 public sealed record DespatchPreview(
     EDespatchProviderKind ProviderKind, string? SeriesPrefix, IReadOnlyList<DespatchRuleError> Errors,
-    bool DriverNationalIdRequired, DespatchPreviewDocument Document);
+    bool DriverNationalIdRequired, DespatchPreviewDocument Document, IReadOnlyList<string> Warnings, Guid? ShipmentStopId);
 
 /// <summary>Belge özeti.</summary>
 /// <param name="CustomerName">Alıcı unvanı.</param>
@@ -66,13 +68,12 @@ internal sealed class PreviewDespatchHandler(
 
         var weighing = await db.Weighings.AsNoTracking().FirstOrDefaultAsync(w => w.Id == request.WeighingId, cancellationToken)
             ?? throw new NotFoundException(nameof(Weighing), request.WeighingId);
-        var hasValid = await db.Waybills.Where(w => w.WeighingId == weighing.Id).AnyAsync(WaybillStates.IsValid, cancellationToken);
-        errors.AddRange(DespatchEligibility.Check(weighing, hasValid));
-
         var issuedAt = DateTimeOffset.UtcNow;
         var draft = await drafts.BuildAsync(weighing, new DespatchDraftInput(
             tenantId, DespatchNumbers.Format(prefix ?? "AAA", TurkeyTime.ToLocal(issuedAt).Year, 1), Guid.NewGuid(), issuedAt,
             null, request.DeliveryLocationId, null), cancellationToken);
+        var hasValid = await DespatchEligibility.HasValidWaybillAsync(db, weighing.Id, draft.ShipmentStopId, cancellationToken);
+        errors.AddRange(DespatchEligibility.Check(weighing, hasValid));
         errors.AddRange(DespatchValidation.Check(draft.Document));
 
         var document = draft.Document;
@@ -83,6 +84,7 @@ internal sealed class PreviewDespatchHandler(
                 DespatchRules.NormalizePlate(document.Plate),
                 document.TrailerPlate is null ? null : DespatchRules.NormalizePlate(document.TrailerPlate),
                 draft.DriverName,
-                document.Lines.Select(l => new DespatchPreviewLine(l.Name, l.Code, l.Quantity, DespatchUnitCodes.Of(l.Unit))).ToList()));
+                document.Lines.Select(l => new DespatchPreviewLine(l.Name, l.Code, l.Quantity, DespatchUnitCodes.Of(l.Unit))).ToList()),
+            draft.Warnings, draft.ShipmentStopId);
     }
 }

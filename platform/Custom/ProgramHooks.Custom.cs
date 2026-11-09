@@ -1,10 +1,13 @@
 using MediatR;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.SignalR;
 using MediatR.Pipeline;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Platform.Custom.Drivers;
 using Platform.Custom.Fleet;
 using Platform.Custom.Messaging;
+using Platform.Custom.Notifications;
 using Platform.Data;
 
 namespace Platform;
@@ -52,6 +55,34 @@ internal static partial class ProgramHooks
 
         builder.Services.Configure<InvitationOptions>(builder.Configuration.GetSection("Invitations"));
         builder.Services.AddScoped<IDriverNotifier, SmsDriverNotifier>();
+
+        // Şoföre irsaliye bildirimi: SignalR (onay) → push → SMS. FCM bağlanana kadar push log'a yazılır.
+        builder.Services.AddSignalR();
+        builder.Services.AddSingleton<IUserIdProvider, SubUserIdProvider>();
+        builder.Services.AddSingleton<DriverPresence>();
+        builder.Services.AddSingleton<DriverAcks>();
+        builder.Services.AddSingleton<DriverNotificationQueue>();
+        builder.Services.Configure<DriverNotificationOptions>(builder.Configuration.GetSection("DriverNotifications"));
+        builder.Services.AddSingleton<IPushSender, LogPushSender>();
+        builder.Services.AddHostedService<DriverNotificationWorker>();
+        builder.Services.AddScoped<TenantNotifier>();
+
+        // Tarayıcı WebSocket'i başlık gönderemez: hub isteklerinde token ?access_token= ile gelir.
+        builder.Services.PostConfigureAll<JwtBearerOptions>(options =>
+        {
+            options.Events ??= new JwtBearerEvents();
+            var previous = options.Events.OnMessageReceived;
+            options.Events.OnMessageReceived = async context =>
+            {
+                await previous(context);
+                if (string.IsNullOrEmpty(context.Token)
+                    && context.HttpContext.Request.Path.StartsWithSegments(DriverHub.Path, StringComparison.OrdinalIgnoreCase)
+                    && context.Request.Query.TryGetValue("access_token", out var token))
+                {
+                    context.Token = token.ToString();
+                }
+            };
+        });
     }
 
     static partial void ConfigureApp(WebApplication app)
@@ -61,6 +92,10 @@ internal static partial class ProgramHooks
         var db = scope.ServiceProvider.GetRequiredService<PlatformDbContext>();
         db.Database.ExecuteSqlRaw(FleetSchema.Sql);
         db.Database.ExecuteSqlRaw(TenantDriverSchema.Sql);
+        db.Database.ExecuteSqlRaw(DriverNotificationSchema.Sql);
+        db.Database.ExecuteSqlRaw(TenantNotificationSchema.Sql);
         VehicleModelCatalog.SeedAsync(db).GetAwaiter().GetResult();
+
+        app.MapHub<DriverHub>(DriverHub.Path);
     }
 }

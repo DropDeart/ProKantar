@@ -87,6 +87,18 @@ builder.Services.AddBaseForge(options =>
         jwt.ServiceClientId = builder.Configuration["Auth:ServiceClient:ClientId"];
         jwt.ServiceClientSecret = builder.Configuration["Auth:ServiceClient:ClientSecret"];
     });
+    // kantar olayları (elle eklendi; BaseForge regen'de yeniden ekleyin): irsaliye kesilince şoföre bildirim zinciri.
+    options.EnableRabbitMq(mq =>
+    {
+        mq.Host = builder.Configuration["RabbitMq:Host"] ?? "localhost";
+        mq.Port = int.Parse(builder.Configuration["RabbitMq:Port"] ?? "5672", System.Globalization.CultureInfo.InvariantCulture);
+        mq.Username = builder.Configuration["RabbitMq:Username"] ?? "guest";
+        mq.Password = builder.Configuration["RabbitMq:Password"] ?? "guest";
+        mq.Subscribe<Platform.Custom.Notifications.WaybillIssuedEvent>(
+            Platform.Custom.Notifications.WaybillIssuedEvent.Type, "platform.NotifyDriverOnWaybillIssued");
+        mq.Subscribe<Platform.Custom.Notifications.TenantNoticeEvent>(
+            Platform.Custom.Notifications.TenantNoticeEvent.Type, "platform.SaveTenantNotice");
+    });
 });
 
 

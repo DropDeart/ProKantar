@@ -50,7 +50,7 @@ internal static class DespatchSeries
 internal sealed class IssueDespatchHandler(
     KantarDbContext db, IUnitOfWork unitOfWork, IEventBus eventBus, ICurrentTenant currentTenant,
     EDespatchSettingsStore settings, IEDespatchProviderRegistry registry, IUblDespatchBuilder ublBuilder,
-    DespatchDraftBuilder drafts, DespatchDelivery delivery)
+    DespatchDraftBuilder drafts, DespatchDelivery delivery, WaybillLinks links)
     : ICommandHandler<IssueDespatchCommand, WaybillView>
 {
     public async Task<WaybillView> Handle(IssueDespatchCommand request, CancellationToken cancellationToken)
@@ -64,19 +64,19 @@ internal sealed class IssueDespatchHandler(
 
         var snapshot = await db.Weighings.AsNoTracking().FirstOrDefaultAsync(w => w.Id == request.WeighingId, cancellationToken)
             ?? throw new NotFoundException(nameof(Weighing), request.WeighingId);
-        await EnsureEligibleAsync(snapshot, cancellationToken);
 
-        // Numara yer tutucuyla doğrulanır; hatalı veride sayaç hiç kilitlenmez.
+        // Numara yer tutucuyla doğrulanır; hatalı veride sayaç hiç kilitlenmez. Sevkiyatlı tartımda durak taslakta seçilir.
         var input = new DespatchDraftInput(tenantId, DespatchNumbers.Format(prefix, TurkeyTime.ToLocal(issuedAt).Year, 1),
             Guid.NewGuid(), issuedAt, request.DriverNationalId, request.DeliveryLocationId, request.Note);
         var draft = await drafts.BuildAsync(snapshot, input, cancellationToken);
+        await EnsureEligibleAsync(snapshot, draft.ShipmentStopId, cancellationToken);
         DespatchValidation.EnsureValid(draft.Document);
 
         await unitOfWork.BeginTransactionAsync(cancellationToken);
         await db.Database.ExecuteSqlInterpolatedAsync(
             $"SELECT 1 FROM \"Weighings\" WHERE \"Id\" = {request.WeighingId} FOR UPDATE", cancellationToken);
         var weighing = await db.Weighings.AsNoTracking().FirstAsync(w => w.Id == request.WeighingId, cancellationToken);
-        await EnsureEligibleAsync(weighing, cancellationToken);
+        await EnsureEligibleAsync(weighing, draft.ShipmentStopId, cancellationToken);
 
         var number = await DespatchNumbers.AllocateAsync(db, tenantId, prefix, issuedAt, cancellationToken);
         var document = draft.Document with { DocumentNo = number };
@@ -87,7 +87,7 @@ internal sealed class IssueDespatchHandler(
             WaybillNo = number,
             WaybillType = provider.RequiresUbl ? WaybillWaybillType.EDespatch : WaybillWaybillType.Paper,
             IssuedAt = issuedAt,
-            QuantityKg = weighing.NetKg,
+            QuantityKg = draft.QuantityKg,
             DeliveryAddress = draft.DeliveryAddressText,
             EDespatchUuid = provider.RequiresUbl ? document.Ettn : null,
             EDespatchStatus = provider.RequiresUbl ? WaybillEDespatchStatus.Draft : null,
@@ -110,6 +110,26 @@ internal sealed class IssueDespatchHandler(
         }
 
         await eventBus.PublishAsync(new WaybillCreatedEvent { Data = WaybillDto.From(waybill) }, cancellationToken);
+
+        // Şoföre bildirim zinciri platformda (SignalR → push → SMS); link giriş istemez.
+        var shipmentNo = weighing.ShipmentId is { } shipmentId
+            ? await db.Shipments.Where(s => s.Id == shipmentId).Select(s => s.ShipmentNo).FirstOrDefaultAsync(cancellationToken)
+            : null;
+        await eventBus.PublishAsync(new WaybillIssuedEvent
+        {
+            TenantId = tenantId,
+            WaybillId = waybill.Id,
+            WaybillNo = waybill.WaybillNo,
+            WeighingId = weighing.Id,
+            ShipmentId = weighing.ShipmentId,
+            ShipmentNo = shipmentNo,
+            DriverId = weighing.DriverId,
+            DriverName = waybill.DriverName,
+            Plate = waybill.Plate ?? weighing.Plate,
+            DeliveryAddress = waybill.DeliveryAddress,
+            LinkUrl = await links.UrlForAsync(waybill.Id, issuedAt, cancellationToken),
+            IssuedAt = issuedAt,
+        }, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await unitOfWork.CommitAsync(cancellationToken);
 
@@ -117,9 +137,9 @@ internal sealed class IssueDespatchHandler(
         return await WaybillViews.GetAsync(db, waybill.Id, CancellationToken.None);
     }
 
-    private async Task EnsureEligibleAsync(Weighing weighing, CancellationToken ct)
+    private async Task EnsureEligibleAsync(Weighing weighing, Guid? stopId, CancellationToken ct)
     {
-        var hasValid = await db.Waybills.Where(w => w.WeighingId == weighing.Id).AnyAsync(WaybillStates.IsValid, ct);
+        var hasValid = await DespatchEligibility.HasValidWaybillAsync(db, weighing.Id, stopId, ct);
         DespatchValidation.ThrowIfAny(DespatchEligibility.Check(weighing, hasValid));
     }
 }

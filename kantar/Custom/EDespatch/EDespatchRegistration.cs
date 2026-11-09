@@ -26,6 +26,9 @@ internal static class EDespatchRegistration
         services.AddSingleton<IConfigureOptions<KeyManagementOptions>>(sp => new ConfigureOptions<KeyManagementOptions>(
             o => o.XmlRepository = new EDespatchKeyRepository(sp.GetRequiredService<IServiceScopeFactory>())));
         services.AddSingleton<EDespatchSecretProtector>();
+        services.AddSingleton<WaybillLinks>();
+        services.AddScoped<ShipmentWaybillIssuer>();
+        services.AddScoped<Notices.TenantNotices>();
         services.AddScoped<EDespatchSettingsStore>();
 
         services.AddSingleton<IUblDespatchBuilder, UblDespatchBuilder>();

@@ -21,6 +21,11 @@ public sealed class DespatchController : BaseController
         return view is null ? NotFound() : Ok(view);
     }
 
+    /// <summary>Tartımın bütün irsaliyeleri (çok duraklı sevkiyatta durak başına bir tane).</summary>
+    [HttpGet("Weighings/{id:guid}/despatches")]
+    public async Task<ActionResult<IReadOnlyList<WaybillView>>> ListForWeighing(Guid id, CancellationToken cancellationToken)
+        => Ok(await Mediator.Send(new ListWeighingDespatchesQuery { WeighingId = id }, cancellationToken));
+
     /// <summary>Kesmeden önce ön kontrol (numara ayırmaz, kayıt yazmaz).</summary>
     [HttpGet("Weighings/{id:guid}/despatch/preview")]
     public async Task<ActionResult<DespatchPreview>> Preview(Guid id, [FromQuery] Guid? deliveryLocationId, CancellationToken cancellationToken)

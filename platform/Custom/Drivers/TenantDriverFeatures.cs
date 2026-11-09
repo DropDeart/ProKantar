@@ -264,7 +264,7 @@ internal sealed class InvitationByTokenHandler(PlatformDbContext db) : IQueryHan
     }
 }
 
-internal sealed class RespondInvitationByTokenHandler(PlatformDbContext db) : ICommandHandler<RespondInvitationByTokenCommand>
+internal sealed class RespondInvitationByTokenHandler(PlatformDbContext db, Notifications.TenantNotifier notifier) : ICommandHandler<RespondInvitationByTokenCommand>
 {
     public async Task Handle(RespondInvitationByTokenCommand request, CancellationToken cancellationToken)
     {
@@ -308,6 +308,7 @@ internal sealed class RespondInvitationByTokenHandler(PlatformDbContext db) : IC
         invitation.Status = request.Accept ? TenantDriverStatus.Active : TenantDriverStatus.Declined;
         invitation.RespondedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
+        await InvitationNotices.RespondedAsync(notifier, db, invitation, request.Accept, cancellationToken);
     }
 }
 
@@ -376,7 +377,7 @@ internal sealed class MyInvitationsHandler(PlatformDbContext db) : IQueryHandler
     }
 }
 
-internal sealed class RespondInvitationHandler(PlatformDbContext db) : ICommandHandler<RespondInvitationCommand>
+internal sealed class RespondInvitationHandler(PlatformDbContext db, Notifications.TenantNotifier notifier) : ICommandHandler<RespondInvitationCommand>
 {
     public async Task Handle(RespondInvitationCommand request, CancellationToken cancellationToken)
     {
@@ -395,5 +396,24 @@ internal sealed class RespondInvitationHandler(PlatformDbContext db) : ICommandH
         invitation.Status = request.Accept ? TenantDriverStatus.Active : TenantDriverStatus.Declined;
         invitation.RespondedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
+        await InvitationNotices.RespondedAsync(notifier, db, invitation, request.Accept, cancellationToken);
+    }
+}
+
+/// <summary>Davet yanıtını firmaya bildirir (zil).</summary>
+internal static class InvitationNotices
+{
+    public static async Task RespondedAsync(
+        Notifications.TenantNotifier notifier, PlatformDbContext db, TenantDriver invitation, bool accepted, CancellationToken ct)
+    {
+        var name = invitation.DriverId is { } driverId
+            ? await db.Drivers.AsNoTracking().Where(d => d.Id == driverId).Select(d => d.FullName).FirstOrDefaultAsync(ct)
+            : null;
+        var who = string.IsNullOrWhiteSpace(name) ? Validation.Phones.Mask(invitation.Phone) : name;
+        await notifier.AddAsync(invitation.TenantId,
+            accepted ? TenantNotificationKind.DriverInvitationAccepted : TenantNotificationKind.DriverInvitationDeclined,
+            accepted ? $"{who} davetinizi kabul etti" : $"{who} davetinizi reddetti",
+            accepted ? "Şoför artık Şoförlerimiz listesinde; sevkiyata atanabilir." : null,
+            "/panel/soforler", $"invite:{invitation.Id:N}", ct);
     }
 }

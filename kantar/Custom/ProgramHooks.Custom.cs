@@ -15,6 +15,18 @@ internal static partial class ProgramHooks
 {
     static partial void ConfigureServices(WebApplicationBuilder builder)
     {
+        // Sevkiyat yol ön izlemesi (OSRM); sonuçlar önbellekte.
+        builder.Services.AddMemoryCache();
+        builder.Services.Configure<Kantar.Custom.Shipments.Routing.RoutingOptions>(
+            builder.Configuration.GetSection(Kantar.Custom.Shipments.Routing.RoutingOptions.Section));
+        builder.Services.AddHttpClient<Kantar.Custom.Shipments.Routing.OsrmRoutePlanner>((sp, http) =>
+        {
+            var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Kantar.Custom.Shipments.Routing.RoutingOptions>>().Value;
+            http.BaseAddress = new Uri(options.OsrmUrl.EndsWith('/') ? options.OsrmUrl : options.OsrmUrl + "/");
+            http.Timeout = TimeSpan.FromSeconds(10);
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("ProKantar/1.0");
+        });
+
         // MediatR ön işlemcileri kendiliğinden taramaz; generate edilen komutların kuralları (Custom/ altındaki
         // IRequestPreProcessor'lar: durum kuralları, kantar bağlantısı) burada bağlanır.
         builder.Services.TryAddEnumerable(ServiceDescriptor.Transient(typeof(IPipelineBehavior<,>), typeof(RequestPreProcessorBehavior<,>)));

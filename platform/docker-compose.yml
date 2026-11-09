@@ -35,6 +35,8 @@ services:
       Netgsm__Password: ${Netgsm__Password:-}
       Netgsm__MsgHeader: ${Netgsm__MsgHeader:-}
       Invitations__WebUrl: ${Invitations__WebUrl:-http://localhost:3000}
+      # Paylaşılan RabbitMQ (kantar/WaybillIssued olayı → şoför bildirim zinciri); şifre kökteki broker ile aynı.
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD .env dosyasinda tanimli olmali}
       # Prod'da: Identity'nin gerçek adresi ve onun Auth__Issuer değeri (yedek issuer — Identity yeniden
       # başlarken oluşabilecek 401'leri önler). Boşsa Program.cs'deki varsayılan/metadata kullanılır.
       # Auth__Authority: "https://identity.ornek.com"

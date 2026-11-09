@@ -1,5 +1,6 @@
 using BaseForge.Core.Exceptions;
 using Kantar.Custom.Validation;
+using Kantar.Custom.Weighings;
 using Kantar.Data;
 using Kantar.Entities;
 using Kantar.Features.Companys;
@@ -51,8 +52,11 @@ internal static class StateRules
 
 internal sealed class CreateWeighingGuard(KantarDbContext db) : IRequestPreProcessor<CreateWeighingCommand>
 {
-    public Task Process(CreateWeighingCommand request, CancellationToken cancellationToken)
-        => StateRules.RequireOwnShipmentAsync(db, request.ShipmentId, cancellationToken);
+    public async Task Process(CreateWeighingCommand request, CancellationToken cancellationToken)
+    {
+        await StateRules.RequireOwnShipmentAsync(db, request.ShipmentId, cancellationToken);
+        await WeighingShipmentLink.ApplyAsync(db, request, cancellationToken);
+    }
 }
 
 internal sealed class UpdateWeighingGuard(KantarDbContext db) : IRequestPreProcessor<UpdateWeighingCommand>

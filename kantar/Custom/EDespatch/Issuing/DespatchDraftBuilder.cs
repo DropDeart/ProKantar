@@ -1,4 +1,6 @@
+using System.Globalization;
 using BaseForge.Core.Exceptions;
+using Kantar.Custom.Shipments;
 using Kantar.Custom.EDespatch.Parties;
 using Kantar.Data;
 using Kantar.Entities;
@@ -25,17 +27,24 @@ public sealed record DespatchDraftInput(
 /// <param name="DriverNationalIdRequired">Platformda TCKN yok; operatör girmeli.</param>
 /// <param name="DeliveryAddressText">Teslim adresinin tek satırlık metni.</param>
 /// <param name="DriverName">Şoför adı soyadı.</param>
+/// <param name="QuantityKg">İrsaliyenin kg karşılığı (tek duraklıda net; çok duraklıda durağın planı; çevrilemezse null).</param>
+/// <param name="Warnings">Kesmeyi engellemeyen uyarılar (ör. net ile plan toplamı arasında %2'den fazla fark).</param>
 public sealed record DespatchDraft(
     DespatchDocument Document, Guid? CompanyId, Guid? DeliveryLocationId, Guid? ShipmentStopId,
-    bool DriverNationalIdRequired, string DeliveryAddressText, string? DriverName);
+    bool DriverNationalIdRequired, string DeliveryAddressText, string? DriverName, decimal? QuantityKg, IReadOnlyList<string> Warnings);
 
 /// <summary>
 /// Tamamlanmış tartımdan <see cref="DespatchDocument"/> kurar. Teslim adresi sırasıyla sevkiyatın teslim durağından,
-/// gövdedeki teslim noktasından ya da cari firmanın adresinden gelir; satır malzeme adı + kodu ve net kg'dır.
+/// gövdedeki teslim noktasından ya da cari firmanın adresinden gelir. Sevkiyata bağlı tartımda her teslimat durağına ayrı
+/// irsaliye kesilir; satırlar durağın yük satırlarıdır: tek duraklı, tek satırlı ve ağırlık birimli yükte miktar tartılan
+/// nettir, aksi halde planlanan miktar yazılır. Sevkiyatsız tartımda satır malzeme adı + kodu ve net kg'dır.
 /// </summary>
 public sealed class DespatchDraftBuilder(KantarDbContext db, ISupplierDirectory suppliers, IDriverDirectory drivers)
 {
     private static readonly DespatchAddress EmptyAddress = new();
+
+    /// <summary>Net ile plan toplamı arasında uyarı verilen sapma oranı.</summary>
+    public const decimal DeviationThreshold = 0.02m;
 
     /// <summary>Taslağı kurar (doğrulamaz).</summary>
     public async Task<DespatchDraft> BuildAsync(Weighing weighing, DespatchDraftInput input, CancellationToken ct)
@@ -50,6 +59,7 @@ public sealed class DespatchDraftBuilder(KantarDbContext db, ISupplierDirectory 
             : company is not null ? AddressOf(company) : EmptyAddress;
 
         var (driver, nationalIdRequired) = await ResolveDriverAsync(weighing, input.DriverNationalId, ct);
+        var load = await LoadOfAsync(weighing, stopId, input.TenantId, ct);
         var document = new DespatchDocument
         {
             Ettn = input.Ettn,
@@ -74,13 +84,13 @@ public sealed class DespatchDraftBuilder(KantarDbContext db, ISupplierDirectory 
             Plate = weighing.Plate,
             TrailerPlate = string.IsNullOrWhiteSpace(weighing.TrailerPlate) ? null : weighing.TrailerPlate,
             Drivers = [driver],
-            Lines = [await LineOfAsync(weighing, input.TenantId, ct)],
+            Lines = load.Lines,
             WeighingTicketNo = weighing.TicketNo,
         };
 
         var driverName = string.Join(' ', new[] { driver.FirstName, driver.FamilyName }.Where(s => s.Length > 0));
         return new DespatchDraft(document, company?.Id, location?.Id, stopId, nationalIdRequired,
-            OneLine(deliveryAddress), driverName.Length == 0 ? null : driverName);
+            OneLine(deliveryAddress), driverName.Length == 0 ? null : driverName, load.QuantityKg, load.Warnings);
     }
 
     /// <summary>Adresi tek satıra çevirir (ör. "Atatürk Cd. 5, Kadıköy/İstanbul 34710").</summary>
@@ -101,8 +111,12 @@ public sealed class DespatchDraftBuilder(KantarDbContext db, ISupplierDirectory 
                 .OrderBy(s => s.Sequence)
                 .Select(s => new { s.Id, s.DeliveryLocationId, s.WaybillId })
                 .ToListAsync(ct);
+            var valid = await db.Waybills.AsNoTracking().Where(w => w.WeighingId == weighing.Id).Where(WaybillStates.IsValid)
+                .Select(w => w.Id).ToListAsync(ct);
+
+            // İstenen durak; yoksa geçerli irsaliyesi olmayan ilk durak.
             var stop = stops.FirstOrDefault(s => s.DeliveryLocationId == requested)
-                ?? stops.FirstOrDefault(s => s.WaybillId == null)
+                ?? stops.FirstOrDefault(s => s.WaybillId is null || !valid.Contains(s.WaybillId.Value))
                 ?? stops.FirstOrDefault();
             if (stop is not null)
             {
@@ -156,6 +170,79 @@ public sealed class DespatchDraftBuilder(KantarDbContext db, ISupplierDirectory 
                 Street = station.Address, District = station.District, City = station.City, PostalCode = station.PostalCode,
             });
     }
+
+    /// <summary>
+    /// Kesilmiş irsaliyenin satırları (giriş istemeyen sayfa için): durağı varsa durağın yükü, yoksa tartımın malzemesi.
+    /// Yayınlanmış plan ve tamamlanmış tartım değişmediği için kesim anındaki satırlarla aynıdır. Kiracı açıkça verilir.
+    /// </summary>
+    public async Task<IReadOnlyList<DespatchLine>> LinesOfWaybillAsync(Guid waybillId, Weighing weighing, Guid tenantId, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(weighing);
+        var stopId = await db.ShipmentStops.IgnoreQueryFilters().AsNoTracking()
+            .Where(s => s.WaybillId == waybillId && s.TenantId == tenantId && !s.IsDeleted)
+            .Select(s => (Guid?)s.Id)
+            .FirstOrDefaultAsync(ct);
+        return (await LoadOfAsync(weighing, stopId, tenantId, ct)).Lines;
+    }
+
+    private sealed record Load(IReadOnlyList<DespatchLine> Lines, decimal? QuantityKg, IReadOnlyList<string> Warnings);
+
+    /// <summary>İrsaliye satırları: sevkiyat durağının yükü; durak ya da yük yoksa tartımın malzemesi ve neti.</summary>
+    private async Task<Load> LoadOfAsync(Weighing weighing, Guid? stopId, Guid tenantId, CancellationToken ct)
+    {
+        if (weighing.ShipmentId is not { } shipmentId || stopId is null)
+        {
+            return new Load([await LineOfAsync(weighing, tenantId, ct)], weighing.NetKg, []);
+        }
+
+        var all = await db.ShipmentStopLines.IgnoreQueryFilters().AsNoTracking()
+            .Where(l => !l.IsDeleted && l.TenantId == tenantId && l.ShipmentStop!.ShipmentId == shipmentId && l.ShipmentStop.StopType == ShipmentStopStopType.Delivery)
+            .OrderBy(l => l.ShipmentStop!.Sequence).ThenBy(l => l.Sequence)
+            .Select(l => new { Line = l, l.Material })
+            .ToListAsync(ct);
+        var mine = all.Where(x => x.Line.ShipmentStopId == stopId).ToList();
+        if (mine.Count == 0)
+        {
+            return new Load([await LineOfAsync(weighing, tenantId, ct)], weighing.NetKg, []);
+        }
+
+        var net = weighing.NetKg ?? 0m;
+        var warnings = new List<string>();
+        var plannedKg = all.Select(x => x.Material is null ? null : ShipmentLoadCapacity.KgOf(x.Line, x.Material)).ToList();
+        var total = plannedKg.Sum() ?? 0m;
+        if (net > 0 && total > 0 && plannedKg.All(k => k is not null))
+        {
+            var deviation = Math.Abs(net - total) / total;
+            if (deviation > DeviationThreshold)
+            {
+                var tr = CultureInfo.GetCultureInfo("tr-TR");
+                warnings.Add($"Tartılan net {net.ToString("N0", tr)} kg, plan toplamı {total.ToString("N0", tr)} kg (%{(deviation * 100).ToString("N1", tr)} fark).");
+            }
+        }
+
+        var singleStop = all.Select(x => x.Line.ShipmentStopId).Distinct().Count() == 1;
+        if (singleStop && mine.Count == 1 && mine[0].Line.Unit is MaterialUnit.Kg or MaterialUnit.Ton && net > 0)
+        {
+            var line = mine[0].Line;
+            var quantity = line.Unit == MaterialUnit.Ton ? net / 1000m : net;
+            return new Load([new DespatchLine(line.MaterialName, NullIfEmpty(line.MaterialCode), quantity, UnitOf(line.Unit))], net, warnings);
+        }
+
+        var lines = mine.Select(x => new DespatchLine(x.Line.MaterialName, NullIfEmpty(x.Line.MaterialCode), x.Line.PlannedQuantity, UnitOf(x.Line.Unit))).ToList();
+        var stopKg = mine.Select(x => x.Material is null ? null : ShipmentLoadCapacity.KgOf(x.Line, x.Material)).ToList();
+        decimal? quantityKg = singleStop ? net : stopKg.All(k => k is not null) ? stopKg.Sum() : null;
+        return new Load(lines, quantityKg, warnings);
+    }
+
+    private static DespatchUnit UnitOf(MaterialUnit unit) => unit switch
+    {
+        MaterialUnit.Ton => DespatchUnit.Ton,
+        MaterialUnit.M3 => DespatchUnit.M3,
+        MaterialUnit.Piece => DespatchUnit.Piece,
+        _ => DespatchUnit.Kg,
+    };
+
+    private static string? NullIfEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
 
     private async Task<DespatchLine> LineOfAsync(Weighing weighing, Guid tenantId, CancellationToken ct)
     {

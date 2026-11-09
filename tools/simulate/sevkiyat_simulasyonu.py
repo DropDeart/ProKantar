@@ -17,7 +17,7 @@ Mobil uygulama ve kantar cihazı olmadığı için şoför ve kantar tarafını 
 
 Kullanım:
   set PK_OPERATOR_EMAIL=... & set PK_OPERATOR_PASSWORD=...
-  python tools/simulate/sevkiyat_simulasyonu.py [--tenant <id>] [--sapma 0.05] [--push] [--hizli]
+  python tools/simulate/sevkiyat_simulasyonu.py [--tenant <id>] [--sapma 0.05] [--tek-durak] [--tckn-yok] [--sms --telefon 5XXXXXXXXX]
 
 Adresler ortam değişkenleriyle değişir: PK_IDENTITY_URL, PK_PLATFORM_URL, PK_KANTAR_URL, PK_TRACKING_URL
 (varsayılanlar yerel docker: 8081, 8085, 8083, 8087). Yalnız yerel/test ortamında çalıştırın: kayıt açar.
@@ -175,7 +175,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="ProKantar sevkiyat simülasyonu")
     parser.add_argument("--tenant", default=os.environ.get("PK_TENANT_ID"), help="Firma (tenant) kimliği; verilmezse ilk aktif üyelik")
     parser.add_argument("--sapma", type=float, default=0.0, help="Tartılan netin plandan farkı (0.05 = %%5 fazla)")
-    parser.add_argument("--push", action="store_true", help="Şoföre sahte push token'lı cihaz kaydet (zincir push'ta durur)")
+    parser.add_argument("--sms", action="store_true",
+                        help="Sahte push cihazı kaydetme; zincir SMS'e iner. Netgsm bağlıyken GERÇEK SMS gider: --telefon ile kendi numaranızı verin")
+    parser.add_argument("--telefon", help="Şoförün cep telefonu (5XXXXXXXXX); --sms ile kullanın")
     parser.add_argument("--tek-durak", action="store_true", help="Tek teslimat duraklı sevkiyat (irsaliyeye gerçek net yazılır)")
     parser.add_argument("--tckn-yok", action="store_true", help="Şoför profilinde TCKN yok: irsaliye taslak kalmalı, operatör girip kesmeli")
     parser.add_argument("--bekle", type=int, default=25, help="Bildirim zinciri için en çok bekleme (sn)")
@@ -228,12 +230,15 @@ def main() -> None:
     driver_email = f"sim-sofor-{stamp}@example.com"
     driver_password = f"Sim!{stamp}aA"
     driver_name = f"Simülasyon Şoför {stamp % 10000}"
-    driver_phone = "55" + str(random.randint(10_000_000, 99_999_999))
+    if args.sms and not args.telefon:
+        fail("--sms gerçek SMS gönderir; rastgele numaraya gitmesin diye --telefon 5XXXXXXXXX ile kendi numaranızı verin.")
+    driver_phone = args.telefon or "55" + str(random.randint(10_000_000, 99_999_999))
     call("POST", f"{IDENTITY}/api/account/register", body={"fullName": driver_name, "email": driver_email, "password": driver_password, "role": "Driver"})
     drv = token_password(driver_email, driver_password)["access_token"]
     driver_id = call("POST", f"{PLATFORM}/api/Drivers", drv, body={"fullName": driver_name, "phone": driver_phone, "nationalId": None if args.tckn_yok else test_tckn()})
     ok(f"{driver_name} · {driver_email} · 0{driver_phone} · profil {driver_id}")
-    if args.push:
+    # Varsayılan: sahte push cihazı → irsaliye bildirimi push'ta durur, rastgele numaraya SMS gitmez.
+    if not args.sms:
         call("POST", f"{PLATFORM}/api/Devices", drv, body={
             "deviceIdentifier": f"sim-{stamp}", "platform": "Android", "pushToken": f"sim-push-{stamp}", "appVersion": "sim", "driverId": driver_id,
         })

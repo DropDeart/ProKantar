@@ -45,6 +45,9 @@ public sealed class PlatformDbContext : BaseForgeDbContext
     /// <summary>Kullanıcının bildirimlere son bakışı (elle eklendi, Custom/Notifications).</summary>
     public DbSet<TenantNotificationCursor> TenantNotificationCursors => Set<TenantNotificationCursor>();
 
+    /// <summary>Tanıtım sitesinden demo talepleri (elle eklendi, Custom/DemoRequests).</summary>
+    public DbSet<DemoRequest> DemoRequests => Set<DemoRequest>();
+
     /// <summary>
     /// Enum alanlar veritabanında sayı değil, değer adıyla (string) saklanır — enum'a değer eklenip sırası
     /// değişse de var olan kayıtlar bozulmaz ve DB okunabilir kalır.

@@ -7,7 +7,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Platform.Custom.Drivers;
 using Platform.Custom.Fleet;
 using Platform.Custom.Messaging;
+using Platform.Custom.DemoRequests;
 using Platform.Custom.Notifications;
+using System.Threading.RateLimiting;
 using Platform.Data;
 
 namespace Platform;
@@ -67,6 +69,15 @@ internal static partial class ProgramHooks
         builder.Services.AddHostedService<DriverNotificationWorker>();
         builder.Services.AddScoped<TenantNotifier>();
 
+        // Tanıtım sitesinin demo talebi giriş istemez: IP başına saatte 5 istek.
+        builder.Services.AddRateLimiter(limiter =>
+        {
+            limiter.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            limiter.AddPolicy(DemoRequestSchema.RateLimitPolicy, context => RateLimitPartition.GetFixedWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromHours(1), QueueLimit = 0 }));
+        });
+
         // Tarayıcı WebSocket'i başlık gönderemez: hub isteklerinde token ?access_token= ile gelir.
         builder.Services.PostConfigureAll<JwtBearerOptions>(options =>
         {
@@ -94,8 +105,10 @@ internal static partial class ProgramHooks
         db.Database.ExecuteSqlRaw(TenantDriverSchema.Sql);
         db.Database.ExecuteSqlRaw(DriverNotificationSchema.Sql);
         db.Database.ExecuteSqlRaw(TenantNotificationSchema.Sql);
+        db.Database.ExecuteSqlRaw(DemoRequestSchema.Sql);
         VehicleModelCatalog.SeedAsync(db).GetAwaiter().GetResult();
 
+        app.UseRateLimiter();
         app.MapHub<DriverHub>(DriverHub.Path);
     }
 }

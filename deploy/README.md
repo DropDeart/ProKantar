@@ -5,11 +5,11 @@ RabbitMQ ve web arayüzü. Servisler yalnız `127.0.0.1:84xx`'te dinler; dışar
 
 | Adres | Servis | Yerel port |
 |---|---|---|
-| prokantar.com, www | web (Next.js) | 8409 |
-| identity.prokantar.com | identity | 8401 |
-| kantar.prokantar.com | kantar | 8403 |
-| platform.prokantar.com | platform (SignalR `/hubs/`) | 8405 |
-| tracking.prokantar.com | tracking | 8407 |
+| prokantar.com.tr, www | web (Next.js) | 8409 |
+| identity.prokantar.com.tr | identity | 8401 |
+| kantar.prokantar.com.tr | kantar | 8403 |
+| platform.prokantar.com.tr | platform (SignalR `/hubs/`) | 8405 |
+| tracking.prokantar.com.tr | tracking | 8407 |
 
 ## İlk kurulum
 1. **DNS:** yukarıdaki altı ad için A kaydı → sunucu IP'si.
@@ -33,5 +33,5 @@ Yerelde `deploy/push.sh` (iki repo `git archive` ile gönderilir), sunucuda 5. a
 ## SuperAdmin verme
 ```sh
 docker exec -i prokantar-postgres-1 psql -U baseforge -d identity_db -c \
-  "INSERT INTO \"AspNetUserRoles\"(\"UserId\",\"RoleId\") SELECT u.\"Id\", r.\"Id\" FROM \"AspNetUsers\" u, \"AspNetRoles\" r WHERE u.\"Email\"='info@prokantar.com' AND r.\"Name\"='SuperAdmin';"
+  "INSERT INTO \"AspNetUserRoles\"(\"UserId\",\"RoleId\") SELECT u.\"Id\", r.\"Id\" FROM \"AspNetUsers\" u, \"AspNetRoles\" r WHERE u.\"Email\"='<yonetici-e-postasi>' AND r.\"Name\"='SuperAdmin';"
 ```

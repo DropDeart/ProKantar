@@ -59,6 +59,21 @@ internal static class ShipmentNumbers
         return string.Create(CultureInfo.InvariantCulture, $"{prefix}{last + 1:000}");
     }
 
+    /// <summary>
+    /// Belirli bir numarayı (ör. fiş no) sevkiyat no yapmadan önce transaction sonuna kadar kilitler: aynı numarayı
+    /// eşzamanlı alan ikinci istek ilki commit edilene kadar bekler, ardından <see cref="IsTakenAsync"/> doluyu görür.
+    /// </summary>
+    public static async Task LockNumberAsync(KantarDbContext db, Guid tenantId, string shipmentNo, CancellationToken ct)
+    {
+        if (db.Database.CurrentTransaction is null)
+        {
+            throw new InvalidOperationException("Sevkiyat numarası transaction içinde kilitlenmeli.");
+        }
+
+        var lockKey = $"shipment-no-exact|{tenantId:N}|{shipmentNo}";
+        await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtextextended({lockKey}, 0))", ct);
+    }
+
     /// <summary>Numara kiracıda (silinmişler dahil) başka bir sevkiyatta kullanılıyor mu?</summary>
     public static Task<bool> IsTakenAsync(KantarDbContext db, Guid tenantId, string shipmentNo, Guid? selfId, CancellationToken ct)
         => db.Shipments.IgnoreQueryFilters()

@@ -42,8 +42,14 @@ public sealed partial class OsrmRoutePlanner(HttpClient http, IMemoryCache cache
 
     private static readonly TimeSpan CacheFor = TimeSpan.FromDays(1);
 
-    /// <summary>Sıralı noktalar arası yol; servis hata verirse yaklaşık hesap.</summary>
-    public async Task<ShipmentRoutePreview> PlanAsync(IReadOnlyList<(int Sequence, double Lat, double Lng)> points, CancellationToken ct)
+    /// <summary>Canlı tahmin (araç konumundan) kısa süre önbellekte; konum değiştikçe yeni anahtar oluşur.</summary>
+    private static readonly TimeSpan EtaCacheFor = TimeSpan.FromMinutes(10);
+
+    /// <summary>
+    /// Sıralı noktalar arası yol; servis hata verirse yaklaşık hesap. <paramref name="withGeometry"/> false ise yol çizgisi
+    /// istenmez (canlı tahmin: yalnız mesafe/süre) ve sonuç kısa süre saklanır.
+    /// </summary>
+    public async Task<ShipmentRoutePreview> PlanAsync(IReadOnlyList<(int Sequence, double Lat, double Lng)> points, CancellationToken ct, bool withGeometry = true)
     {
         if (points.Count < 2)
         {
@@ -51,14 +57,16 @@ public sealed partial class OsrmRoutePlanner(HttpClient http, IMemoryCache cache
         }
 
         var coords = string.Join(';', points.Select(p => string.Create(CultureInfo.InvariantCulture, $"{p.Lng:0.######},{p.Lat:0.######}")));
-        if (cache.TryGetValue(coords, out ShipmentRoutePreview? cached) && cached is not null)
+        var cacheKey = withGeometry ? coords : "eta|" + coords;
+        if (cache.TryGetValue(cacheKey, out ShipmentRoutePreview? cached) && cached is not null)
         {
             return cached;
         }
 
         try
         {
-            using var response = await http.GetAsync($"route/v1/driving/{coords}?overview=full&geometries=geojson&steps=false", ct);
+            var overview = withGeometry ? "full" : "false";
+            using var response = await http.GetAsync($"route/v1/driving/{coords}?overview={overview}&geometries=geojson&steps=false", ct);
             response.EnsureSuccessStatusCode();
             using var json = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
             var root = json.RootElement;
@@ -73,8 +81,8 @@ public sealed partial class OsrmRoutePlanner(HttpClient http, IMemoryCache cache
                     leg.GetProperty("distance").GetDouble(), leg.GetProperty("duration").GetDouble()))
                 .ToList();
             var preview = new ShipmentRoutePreview(route.GetProperty("distance").GetDouble(), route.GetProperty("duration").GetDouble(),
-                legs, route.GetProperty("geometry").GetRawText(), false);
-            cache.Set(coords, preview, CacheFor);
+                legs, withGeometry ? route.GetProperty("geometry").GetRawText() : null, false);
+            cache.Set(cacheKey, preview, withGeometry ? CacheFor : EtaCacheFor);
             return preview;
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or InvalidOperationException or JsonException or KeyNotFoundException)
@@ -135,3 +143,55 @@ internal sealed class ShipmentRouteHandler(KantarDbContext db, OsrmRoutePlanner 
         return await planner.PlanAsync(stops.Select(s => (s.Sequence, (double)s.Latitude, (double)s.Longitude)).ToList(), cancellationToken);
     }
 }
+
+/// <summary>
+/// Canlı tahmini varış: aracın son konumundan (sıra 0) <see cref="FromSequence"/> ve sonraki duraklara yol. Bacak süreleri
+/// sırayla toplanınca durak başına varış süresi çıkar. Konum istemciden gelir (tracking'in son konumu).
+/// </summary>
+public sealed class ShipmentEtaQuery : IQuery<ShipmentRoutePreview>
+{
+    /// <summary>Sevkiyat (route'tan).</summary>
+    public Guid ShipmentId { get; set; }
+
+    /// <summary>Aracın enlemi.</summary>
+    public double Lat { get; set; }
+
+    /// <summary>Aracın boylamı.</summary>
+    public double Lng { get; set; }
+
+    /// <summary>Henüz varılmamış ilk durağın sırası.</summary>
+    public int FromSequence { get; set; }
+}
+
+internal sealed class ShipmentEtaHandler(KantarDbContext db, OsrmRoutePlanner planner) : IQueryHandler<ShipmentEtaQuery, ShipmentRoutePreview>
+{
+    public async Task<ShipmentRoutePreview> Handle(ShipmentEtaQuery request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (request.Lat is < -90 or > 90 || request.Lng is < -180 or > 180)
+        {
+            throw new ValidationException("Lat", "Geçersiz konum.");
+        }
+
+        if (!await db.Shipments.AnyAsync(s => s.Id == request.ShipmentId, cancellationToken))
+        {
+            throw new NotFoundException(nameof(Shipment), request.ShipmentId);
+        }
+
+        var stops = await db.ShipmentStops.AsNoTracking()
+            .Where(s => s.ShipmentId == request.ShipmentId && s.Sequence >= request.FromSequence)
+            .OrderBy(s => s.Sequence)
+            .Select(s => new { s.Sequence, s.Latitude, s.Longitude })
+            .ToListAsync(cancellationToken);
+        if (stops.Count == 0)
+        {
+            return new ShipmentRoutePreview(0, 0, [], null, false);
+        }
+
+        // ~10 m'ye yuvarlanır: araç beklerken aynı tahmin önbellekten gelir.
+        var points = new List<(int Sequence, double Lat, double Lng)> { (0, Math.Round(request.Lat, 4), Math.Round(request.Lng, 4)) };
+        points.AddRange(stops.Select(s => (s.Sequence, (double)s.Latitude, (double)s.Longitude)));
+        return await planner.PlanAsync(points, cancellationToken, withGeometry: false);
+    }
+}
+

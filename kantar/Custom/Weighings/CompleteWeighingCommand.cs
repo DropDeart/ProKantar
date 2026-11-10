@@ -184,8 +184,14 @@ internal sealed class CompleteWeighingHandler(
             ?? throw new NotFoundException(nameof(DeliveryLocation), deliveryLocationId);
 
         // Sevkiyat no fiş no'dur; fiş no istasyon içinde benzersiz olduğundan başka istasyonda aynısı varsa
-        // istasyonun sıradaki sevkiyat numarası verilir (kiracı içinde benzersizlik).
+        // istasyonun sıradaki sevkiyat numarası verilir (kiracı içinde benzersizlik). Numara kilitlenir: iki istasyon aynı
+        // fiş no ile aynı anda tamamlarsa ikincisi bekler, numarayı dolu görür ve sıradaki numarayı alır (benzersiz indeks 500'ü olmaz).
         var shipmentNo = weighing.TicketNo;
+        if (!string.IsNullOrWhiteSpace(shipmentNo))
+        {
+            await ShipmentNumbers.LockNumberAsync(db, tenantId, shipmentNo, cancellationToken);
+        }
+
         if (string.IsNullOrWhiteSpace(shipmentNo) || await ShipmentNumbers.IsTakenAsync(db, tenantId, shipmentNo, null, cancellationToken))
         {
             var stationCode = await db.Stations.IgnoreQueryFilters()

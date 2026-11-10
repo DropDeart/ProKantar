@@ -109,6 +109,13 @@ public sealed class OperationsController : BaseController
         return NoContent();
     }
 
+    /// <summary>Canlı tahmini varış: aracın son konumundan kalan duraklara mesafe ve süre (bacak bacak).</summary>
+    [HttpGet("Shipments/{id:guid}/eta")]
+    public async Task<ActionResult<Kantar.Custom.Shipments.Routing.ShipmentRoutePreview>> ShipmentEta(
+        Guid id, [FromQuery] double lat, [FromQuery] double lng, [FromQuery] int fromSequence, CancellationToken cancellationToken)
+        => Ok(await Mediator.Send(
+            new Kantar.Custom.Shipments.Routing.ShipmentEtaQuery { ShipmentId = id, Lat = lat, Lng = lng, FromSequence = fromSequence }, cancellationToken));
+
     /// <summary>Yol ön izlemesi: durak sırasıyla yol çizgisi, durak arası mesafe ve süre (taslakta da).</summary>
     [HttpGet("Shipments/{id:guid}/route")]
     public async Task<ActionResult<Kantar.Custom.Shipments.Routing.ShipmentRoutePreview>> ShipmentRoute(Guid id, CancellationToken cancellationToken)

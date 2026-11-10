@@ -57,7 +57,7 @@ internal sealed class ListStationHandler : IQueryHandler<ListStationQuery, Paged
                     query = query.Where(x => x.IsActive == filterIsActive);
                 }
 
-                return searchPattern.Length == 0 ? query : query.Where(x => EF.Functions.ILike(x.Name, searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike(x.Code, searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.Address ?? string.Empty), searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.Phone ?? string.Empty), searchPattern, LikePattern.EscapeCharacter));
+                return searchPattern.Length == 0 ? query : query.Where(x => EF.Functions.ILike(x.Name, searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike(x.Code, searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.Address ?? string.Empty), searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.Phone ?? string.Empty), searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.City ?? string.Empty), searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.District ?? string.Empty), searchPattern, LikePattern.EscapeCharacter) || EF.Functions.ILike((x.PostalCode ?? string.Empty), searchPattern, LikePattern.EscapeCharacter));
             },
             cancellationToken);
 

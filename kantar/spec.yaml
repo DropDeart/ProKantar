@@ -93,6 +93,10 @@ entities:
     paginated: true
     sortable: true
     searchable: true
+    # ConnectionInfo aranmaz (bağlantı bilgisi/parola içerebilir).
+    searchFields:
+    - Name
+    - SerialNo
   Machine:
     props:
       name:
@@ -721,6 +725,12 @@ entities:
     paginated: true
     sortable: true
     searchable: true
+    # Şoför TCKN, UBL XML ve sağlayıcı alanları aranmaz (KVKK + performans).
+    searchFields:
+    - WaybillNo
+    - DeliveryAddress
+    - ErpDocNo
+    - ErpError
   Shipment:
     props:
       shipmentNo:

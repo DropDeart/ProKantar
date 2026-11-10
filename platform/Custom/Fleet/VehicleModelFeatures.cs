@@ -34,6 +34,9 @@ public sealed class VehicleModelListQuery : IQuery<IReadOnlyList<VehicleModelDto
     /// <summary>Marka/model içinde arama.</summary>
     public string? Search { get; set; }
 
+    /// <summary>Yalnız onay bekleyen (etkin) öneriler; yalnız yönetici (<see cref="IncludePending"/> ile birlikte).</summary>
+    public bool OnlyPending { get; set; }
+
     /// <summary>Onay bekleyenler de dahil (yalnız yönetici; controller doldurur).</summary>
     [System.Text.Json.Serialization.JsonIgnore]
     [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
@@ -179,6 +182,11 @@ internal sealed class VehicleModelListHandler(PlatformDbContext db) : IQueryHand
         {
             var userId = request.UserId;
             models = models.Where(m => (m.IsApproved && m.IsActive) || (userId != null && m.SuggestedByUserId == userId));
+        }
+        else if (request.OnlyPending)
+        {
+            // Reddedilen öneri pasife alınır; listede yalnız karar bekleyenler kalır.
+            models = models.Where(m => !m.IsApproved && m.IsActive);
         }
 
         if (!string.IsNullOrWhiteSpace(request.Brand))

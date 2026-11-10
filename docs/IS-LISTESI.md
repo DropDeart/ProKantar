@@ -111,12 +111,12 @@ Yapılacaklar (öneri):
   - panel: `/panel/soforler` (liste, kayıtlı şoför / telefonla davet, istasyona yakın müsait şoförler)
 - [ ] **Mobil:** "Müsaitim" anahtarı (açıkken birkaç dakikada bir `PUT driver/availability`, kapatınca `DELETE`), davetler ekranı (kabul/red), push bildirimi.
 - [ ] **İş teklifi (Uber mantığı, 2. adım):** sevkiyatı yakındaki müsait şoförlere teklif et, ilk kabul eden alır; teklif süresi, ücret alanı, kabul yarışı (kilit). Karar: teklif yalnız Şoförlerimiz'e mi, herkese mi?
-- [ ] Sevkiyat formunda şoför aramasında önce Şoförlerimiz gelsin.
+- [x] Şoför arama penceresinde ilk sekme "Şoförlerimiz" (sevkiyat formu ve araç ataması; firmanın aktif şoförleri, ad/telefonla süzülür) (10.11).
 - [x] Netgsm OTP SMS (06.11): identity `NetgsmSmsSender` (`sms/rest/v2/otp`, Basic Auth); `Auth__Messaging__SmsProvider=Netgsm` + Usercode/Password/MsgHeader `.env`'de. Metin Türkçe karaktersize çevrilir, ≤155 karakter, yalnız TR cep. Gerçek gönderim gönderici adı onayını bekliyor (bkz. §0).
 - [x] Davet SMS'i (06.11): platform `ISmsGateway` → `NetgsmSmsGateway` (`sms/rest/v2/send`, n:n toplu, `encoding=TR`, `iysfilter=0`); `Netgsm__*` .env'de yoksa `LogSmsGateway`. `SmsDriverNotifier` push gelene kadar kayıtlı/kayıtsız her davete SMS atar; SMS hatası daveti bozmaz. Gerçek gönderim gönderici adı onayını bekliyor (bkz. §0).
 - [x] İrsaliye linki SMS'i aynı `ISmsGateway` ile (09.11); push arayüzü hazır, FCM bağlanmadı.
 - [ ] **Mobil:** şoför araç eklerken `VehicleModels/brands` → `VehicleModels?brand=` → `PUT Vehicles/{id}/spec`; listede yoksa `POST VehicleModels/suggestions`.
-- [ ] Yönetici paneli: onay bekleyen model önerileri (`GET VehicleModels?pending=true` + `PUT VehicleModels/{id}`).
+- [x] Yönetici paneli `/admin/arac-modelleri`: onay bekleyen model önerileri (`GET VehicleModels?pending=true&onlyPending=true`), düzeltip onayla ya da reddet (pasif) (10.11).
 - [ ] Araç kapasitesi denetimi: kantar, platformdan aracın azami yüklü ağırlığını (gRPC) alıp planlanan yük + kayıtlı dara (`TenantVehicle.StoredTareKg`) ile karşılaştırsın; çıkış tartımında ölçülen brüt azami ağırlığı aşarsa engel/uyarı (karar bekliyor). `VehicleType.maxGrossKg` bununla gereksizleşiyor.
 - [ ] Katalog değerleri tipik; yasal dingil sınırları (18/26/32/40 t) yönetmelikten teyit edilmeli.
 - [x] Şoför bildirim zinciri: kantar `kantar/WaybillIssued` olayı → platform SignalR (ack) → push → SMS ile imzalı irsaliye linki (09.11).
@@ -124,9 +124,9 @@ Yapılacaklar (öneri):
 
 ## 2. Unutulmuş iş: yol haritası ve tahmini varış süresi
 
-- [ ] Sefer için rota çizimi (sevkiyat detayı ve haritası) ile durak başına tahmini varış süresi.
-  - Planlanırken (sevkiyat formunda) ve seyir sırasında, son konuma göre güncellenen.
-  - Yönlendirme servisi seçilmeli: OSRM / GraphHopper (kendi sunucumuzda) ya da ücretli bir API. Şu an konum araması Nominatim ile yapılıyor; production için ücretli sağlayıcı gerekecek.
+- [x] Rota ön izlemesi: sevkiyat detayında yol çizgisi, durak arası mesafe/süre (`kantar/Custom/Shipments/Routing`, OSRM, bir gün önbellek).
+- [x] Canlı tahmini varış (10.11): `GET Shipments/{id}/eta?lat=&lng=&fromSequence=` (OSRM, geometrisiz, 10 dk önbellek, konum ~10 m yuvarlanır); sevkiyat detayında varılmamış duraklara "Tahmini varış". Konum 30 dk'dan eskiyse gösterilmez. Canlı seferle görsel olarak denenmedi.
+- [ ] Production için kendi OSRM sunucusu (`Routing:OsrmUrl`); varsayılan `router.project-osrm.org` demo sunucusu yalnız geliştirme içindir.
 
 ## 3. e-İrsaliye: yapıldı, açık kalanlar
 
@@ -146,7 +146,7 @@ Açık kalanlar:
 - [ ] e-Logo durum kodu eşlemesi tahmine dayanıyor; kodda "DOĞRULANMALI" notlu. Canlı URL de tahmin.
 - [ ] GİB'e kayıtlı olmayan alıcı için varsayılan etiket `urn:mail:irsaliyepk@gib.gov.tr` teyit edilmeli (`Providers/GibAliases.cs`).
 - [x] **Ürün kararı (10.11):** GİB kuralları (TCKN, posta kodu) kâğıt irsaliyede de aynen uygulanır; şoför bilgisi her durumda gerekli. Şoför yerine firma çalışanı taşıma senaryosu gelirse yeniden değerlendirilir.
-- [ ] Şoför TCKN'si için ekran yok. Şu an operatör irsaliye keserken giriyor; mobil uygulamada kayıt sırasında sorulmalı (mobil ekip).
+- [x] Şoför TCKN'si (10.11): `GET api/me/driver`, `PUT api/me/driver/national-id` (ad, soyad, doğum yılı ile NVİ KPSPublic `TCKimlikNoDogrula`; doğum yılı saklanmaz). Web: `/sirket` şoför kartında "Kimlik bilgisi". `Nvi__Enabled` varsayılan false (yalnız sağlama); yerelden NVİ'ye bağlantı sıfırlandı, **sunucudan erişim denenip production'da true yapılmalı**. Generated `PUT Drivers` hâlâ NVİ'siz TCKN yazabiliyor (mobil bu ucu kullanacak). Mobil ekip aynı ucu kullanacak.
 - [ ] GİB doğrudan entegrasyonu (kiracının kendi mali mührüyle) ve diğer entegratörler: yeni bir `IEDespatchProvider` yazılarak eklenir.
 - [ ] e-İrsaliye iptali: bildiğimiz kadarıyla GİB'de iptal yok, düzeltme yeni irsaliyeyle yapılıyor. Doğrulanmalı.
 
@@ -175,8 +175,8 @@ Açık kalanlar:
 
 ## 5. Diğer açık işler
 
-- [ ] Admin sayfalarında (`src/app/(admin)/admin/page.tsx`, `admin/basvurular/[tenantId]`) hata/403'te bitmeyen yükleme ekranı. Panel için yazılan `useAsync` + `LoadError` ile çevrilmeli.
-- [ ] Aynı fiş numarasıyla iki istasyon aynı anda planlanmamış çıkış tartımı yaparsa benzersiz indeks yüzünden 500 dönebilir (`CompleteWeighingCommand`). Çok düşük ihtimal.
+- [x] Admin sayfaları (başvuru listesi ve ayrıntısı) `useAsync` + `LoadError`/`TableStatusRows` ile (10.11): hata, 403 ve 404'te mesaj ve "Tekrar dene"; sonsuz iskelet yok. Liste identity `GET api/admin/tenants/paged` (sayfa, durum süzgeci, arama sunucuda; özet kutuları `counts`).
+- [x] Aynı fiş no ile eşzamanlı planlanmamış çıkış: numara `ShipmentNumbers.LockNumberAsync` ile kilitlenir; ikinci istek bekler, numarayı dolu görüp sıradaki sevkiyat numarasını alır (10.11).
 - [ ] **Adım 3** (mobil ekiple):
   - şoför atamayı uygulamada kabul etsin;
   - konum izni (LocationConsent) sunucuda denetlensin;
@@ -186,11 +186,12 @@ Açık kalanlar:
   mahalleden posta kodu; haritada işaretleyince ve "Konumumu kullan" ile il/ilçe/mahalle/posta kodu/açık adres dolar.
   Veri: `turkey-neighbourhoods` (MIT) → `scripts/build-address-data.mjs` → `src/lib/regions.ts` + `public/data/mahalle/<plaka>.json`.
   İlçe listesi güncellendi (eski listede 2012/2014 büyükşehir ilçeleri yoktu: Efeler, Karesi, Eyüpsultan…; il merkezi "Merkez").
-- [ ] İç modal açılınca dış formda "Nokta adı" hatası görünmesin.
-- [ ] Tartım detayında irsaliye kartı için ayrıca tartım iptal düğmesi (backend ucu var: `POST api/Weighings/{id}/cancel`).
-- [ ] Tablolarda posta kodu kolonu yok, yalnız formlarda var.
-- [ ] Menüye "Ayarlar" eklenince üst çubukta e-posta yalnız 2xl ve üzerinde gösteriliyor; gözden geçirilmeli.
+- [x] İç pencere açılınca dış formda "zorunlu" hatası çıkmaz (10.11): `useFieldError` — boş alanın hatası yalnız gönderim denemesinden sonra; dolu alanın biçim hatası alandan çıkınca.
+- [x] Tartım detayında "Tartımı iptal et" (yalnız açık tartım, gerekçeli) (10.11).
+- [x] Tanımlar tablolarında posta kodu ilçe/il yanında; cari firmalarda adres kolonu (10.11).
+- [x] Üst çubuk: e-posta hesap menüsünde, her genişlikte görünür (yeniden düzenlemede çözülmüş; 10.11 kontrol).
 - [ ] BaseForge: istemcinin iptal ettiği istekler ERR olarak loglanıyor; BaseForge backlog'una.
+- [ ] Rate limit (10.11 tespit): üretilen CRUD uçlarında sınır yok; BaseForge yalnız `counters` uçlarını sınırlıyor (`baseforge-counter`, 30/dk). Gerçek istek hacmi ölçülünce genel sınır (okuma/yazma ayrı, kullanıcı/IP başına) eklenecek; kantar cihazı ve konum uçları muaf/ayrı politika. Kullanıcı: "istek sayısını bilmiyoruz, sonra bakarız".
 - [ ] Production'da Nominatim yerine ücretli bir adres/konum sağlayıcısı.
 
 ## 6. Yerel test notları

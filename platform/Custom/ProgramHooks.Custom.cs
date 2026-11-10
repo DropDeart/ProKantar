@@ -55,6 +55,21 @@ internal static partial class ProgramHooks
             builder.Services.AddSingleton<ISmsGateway, LogSmsGateway>();
         }
 
+        // Şoför TCKN doğrulaması: Nvi:Enabled ise NVİ KPSPublic, değilse yalnız sağlama algoritması (geliştirme).
+        var nvi = builder.Configuration.GetSection("Nvi").Get<NviOptions>() ?? new NviOptions();
+        if (nvi.Enabled)
+        {
+            builder.Services.AddHttpClient<INationalIdVerifier, NviNationalIdVerifier>(c =>
+            {
+                c.BaseAddress = new Uri(nvi.Url);
+                c.Timeout = TimeSpan.FromSeconds(15);
+            });
+        }
+        else
+        {
+            builder.Services.AddSingleton<INationalIdVerifier, ChecksumNationalIdVerifier>();
+        }
+
         builder.Services.Configure<InvitationOptions>(builder.Configuration.GetSection("Invitations"));
         builder.Services.AddScoped<IDriverNotifier, SmsDriverNotifier>();
 

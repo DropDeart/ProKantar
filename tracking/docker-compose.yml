@@ -23,6 +23,8 @@ services:
     build: .
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+      # Loki isteğe bağlı: ../observability çalışırken .env'e LOKI_URL=http://host.docker.internal:3100 yazın; boşsa yalnız konsol.
+      Serilog__LokiUrl: ${LOKI_URL:-}
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=prokantar_tracking_db;Username=baseforge;Password=${POSTGRES_PASSWORD}"
       RabbitMq__Password: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD .env dosyasinda tanimli olmali}
       Auth__ServiceClient__ClientSecret: ${Auth__ServiceClient__ClientSecret:-}

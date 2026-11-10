@@ -2,8 +2,8 @@
 # Başlat:  docker compose up -d        (bu klasörde)
 # Grafana: http://localhost:3000  (kullanıcı/parola: .env içindeki GRAFANA_USER / GRAFANA_PASSWORD)
 #          'BaseForge Logs' dashboard'u ve Loki veri kaynağı hazır gelir.
-# Servisler Loki'ye appsettings.json'daki Serilog:LokiUrl ile bağlanır (varsayılan
-# http://host.docker.internal:3100); Loki kapalıysa servisler sessizce yalnızca konsola loglar.
+# Servisler Loki'ye kendi klasörlerindeki .env'de LOKI_URL=http://host.docker.internal:3100 verilince bağlanır
+# (varsayılan boş: yalnız konsol). Loki kapalıyken adres verilirse BaseForge kuyruğu 10.000 olayla sınırlar.
 # Log saklama süresi (varsayılan 7 gün): grafana/loki-config.yaml -> limits_config.retention_period
 name: baseforge-observability
 services:

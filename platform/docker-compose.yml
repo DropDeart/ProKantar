@@ -3,8 +3,8 @@
 # API arayüzü:   http://localhost:8085/scalar/v1
 # Durdur+temizle: docker compose down -v
 # Merkezi log toplama (Grafana Loki + Grafana) workspace'teki ../observability klasöründedir
-# (orada 'docker compose up -d'; Grafana: http://localhost:3000) — appsettings.json'daki Serilog:LokiUrl
-# boşsa/erişilemezse servis sadece konsola loglamaya devam eder, bu bir ön koşul değildir.
+# (orada 'docker compose up -d'; Grafana: http://localhost:3000) — bu klasörün .env'indeki LOKI_URL
+# (ör. http://host.docker.internal:3100) ile açılır; boşsa/erişilemezse servis sadece konsola loglamaya devam eder, bu bir ön koşul değildir.
 services:
   postgres:
     image: postgres:17-alpine
@@ -27,6 +27,8 @@ services:
     build: .
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+      # Loki isteğe bağlı: ../observability çalışırken .env'e LOKI_URL=http://host.docker.internal:3100 yazın; boşsa yalnız konsol.
+      Serilog__LokiUrl: ${LOKI_URL:-}
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=prokantar_platform_db;Username=baseforge;Password=${POSTGRES_PASSWORD}"
       Auth__ServiceClient__ClientSecret: ${Auth__ServiceClient__ClientSecret:-}
       Cors__AllowedOrigins__0: ${CORS_ORIGIN:-http://localhost:3000}

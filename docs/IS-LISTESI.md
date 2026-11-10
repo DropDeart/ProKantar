@@ -31,7 +31,7 @@ Repolar: `DropDeart/ProKantar` (backend) ve `DropDeart/ProKantarUI` (ön yüz).
 
 ---
 
-## 0.1 Sevkiyat zinciri ve simülasyon (09.11) — commit'lenmedi
+## 0.1 Sevkiyat zinciri ve simülasyon (09.11)
 
 Yapıldı ve simülasyonla uçtan uca doğrulandı (iki duraklı / tek duraklı, %5 sapma, push dalı):
 - kantar: çıkış tartımı plakadan yayındaki sevkiyata bağlanır; malzeme, cari, şoför plandan gelir; plana bağlı tartımda başka
@@ -51,13 +51,15 @@ Yapıldı ve simülasyonla uçtan uca doğrulandı (iki duraklı / tek duraklı,
   `tools/simulate/sevkiyat_simulasyonu.py [--sapma 0.05] [--push] [--tek-durak]`.
 
 Kalanlar:
-- [ ] İrsaliye çıkış tartımından sonra **otomatik** kesilmiyor (karar 06.11); şimdilik tartım ayrıntısından elle. Otomatik kesimde
-  GİB eksikleri (TCKN, posta kodu) olursa ne olacağı kararlaştırılmalı.
+- [x] İrsaliye çıkış tartımından sonra otomatik kesilir (`ShipmentWaybillIssuer`, `POST Weighings/{id}/complete`): eksik bilgili
+  (TCKN, posta kodu) durak taslak kalır, tartım tamamlanır, firmaya bildirim düşer; eksik tamamlanınca elle kesilir.
 - [ ] FCM bağlantısı (push gerçek gönderim); `LogPushSender` yerine.
 - [ ] Platform birden çok kopyaya çıkarsa SignalR için Redis backplane; `DriverPresence` kopya içi.
-- [ ] Kayıtta şoför profili SMS doğrulamasından önce kayıttaki numarayla açılıyor: başkasının numarasıyla kayıt o numaranın davet
-  kabulünü engelleyebilir. Profil telefonu doğrulanmış `phone_number` ile eşleşmeli.
-- [ ] Sosyal girişle bireysel kayıt şoför rolü vermiyor.
+- [x] Şoför profili yalnız doğrulanmış numarayla açılır (10.11): `CreateDriverGuard` token'daki `phone_number` ister, telefonu oradan
+  yazar; `UpdateDriverGuard` numara değişiminde aynısını ister. UI profili kayıtta değil, telefon doğrulanınca açar
+  (`platformApi.ensureDriverProfile`). Önceden başkasının numarasıyla açılan profil o numaraya giden daveti kabul edebiliyordu.
+- [x] Sosyal girişle bireysel kayıtta "Şoförüm" seçimi rol olarak taşınır (10.11): `/callback` `POST api/account/roles/Driver` ile
+  ekler, token yenilenir, telefon doğrulamaya (davetle gelende davete) gidilir. Yerelde sağlayıcı tanımlı değil; uçtan uca denenmedi.
 
 ## 1. Sıradaki iş: sevkiyat yükü ve kantarın sevkiyattan beslenmesi (KARARLAŞTI)
 
@@ -143,7 +145,7 @@ Açık kalanlar:
   - Elle deneme betiği: `elogo_client.py send` (scratchpad'te; gerekirse repoya `tools/` olarak alınabilir).
 - [ ] e-Logo durum kodu eşlemesi tahmine dayanıyor; kodda "DOĞRULANMALI" notlu. Canlı URL de tahmin.
 - [ ] GİB'e kayıtlı olmayan alıcı için varsayılan etiket `urn:mail:irsaliyepk@gib.gov.tr` teyit edilmeli (`Providers/GibAliases.cs`).
-- [ ] **Ürün kararı:** GİB kuralları (TCKN, posta kodu) kâğıt irsaliyeye de uygulanıyor. Kâğıtta gevşetilsin mi?
+- [x] **Ürün kararı (10.11):** GİB kuralları (TCKN, posta kodu) kâğıt irsaliyede de aynen uygulanır; şoför bilgisi her durumda gerekli. Şoför yerine firma çalışanı taşıma senaryosu gelirse yeniden değerlendirilir.
 - [ ] Şoför TCKN'si için ekran yok. Şu an operatör irsaliye keserken giriyor; mobil uygulamada kayıt sırasında sorulmalı (mobil ekip).
 - [ ] GİB doğrudan entegrasyonu (kiracının kendi mali mührüyle) ve diğer entegratörler: yeni bir `IEDespatchProvider` yazılarak eklenir.
 - [ ] e-İrsaliye iptali: bildiğimiz kadarıyla GİB'de iptal yok, düzeltme yeni irsaliyeyle yapılıyor. Doğrulanmalı.
@@ -180,7 +182,10 @@ Açık kalanlar:
   - konum izni (LocationConsent) sunucuda denetlensin;
   - geç gelen konumlar kayıt zamanına göre işlensin (sıralama düzeltmesi yapıldı, kabul akışı yok).
 - [ ] **Karar:** şoför ad soyad araması tüm platformda mı, yalnız firmayla çalışmış şoförlerde mi?
-- [ ] Haritaya tıklayınca il/ilçe/adres/posta kodu otomatik dolsun.
+- [x] Adres formları (istasyon, teslimat noktası, cari firma, şirket başvurusu) ortak `AddressFields` (10.11): il → ilçe → mahalle,
+  mahalleden posta kodu; haritada işaretleyince ve "Konumumu kullan" ile il/ilçe/mahalle/posta kodu/açık adres dolar.
+  Veri: `turkey-neighbourhoods` (MIT) → `scripts/build-address-data.mjs` → `src/lib/regions.ts` + `public/data/mahalle/<plaka>.json`.
+  İlçe listesi güncellendi (eski listede 2012/2014 büyükşehir ilçeleri yoktu: Efeler, Karesi, Eyüpsultan…; il merkezi "Merkez").
 - [ ] İç modal açılınca dış formda "Nokta adı" hatası görünmesin.
 - [ ] Tartım detayında irsaliye kartı için ayrıca tartım iptal düğmesi (backend ucu var: `POST api/Weighings/{id}/cancel`).
 - [ ] Tablolarda posta kodu kolonu yok, yalnız formlarda var.

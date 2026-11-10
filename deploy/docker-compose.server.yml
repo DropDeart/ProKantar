@@ -1,0 +1,175 @@
+# ProKantar — sunucu (kapalı test / canlı) kurulumu. Tek compose: dört servis, tek PostgreSQL (PostGIS, dört veritabanı),
+# RabbitMQ ve web arayüzü. Dışarıya yalnız nginx açılır; servisler 127.0.0.1'deki portlardan nginx'e bağlanır.
+#
+# Dizin düzeni (sunucu):  /root/apps/prokantar/ProKantar  (bu repo)  ve  /root/apps/prokantar/ProKantarUI
+# Çalıştır:  cd /root/apps/prokantar/ProKantar/deploy && docker compose -f docker-compose.server.yml --env-file .env.server up -d --build
+# Ayrıntı: deploy/README.md
+name: prokantar
+
+x-dotnet: &dotnet
+  restart: unless-stopped
+  environment: &dotnet-env
+    ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Staging}
+    Serilog__LokiUrl: ""
+    # Token'ı içeriden doğrular (discovery/JWKS identity konteynerinden); issuer dışarıdaki adres.
+    Auth__Authority: http://identity:8080
+    Auth__Issuer: https://${IDENTITY_HOST}/
+    Cors__AllowedOrigins__0: https://${WEB_HOST}
+    Cors__AllowedOrigins__1: https://www.${WEB_HOST}
+    RabbitMq__Host: rabbitmq
+    RabbitMq__Username: baseforge
+    RabbitMq__Password: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD}
+    # nginx host'ta; konteynere ağ geçidinden (bu ağın ilk adresi) gelir.
+    ForwardedHeaders__KnownNetworks__0: 172.31.60.0/24
+  # Discovery belgesindeki JWKS adresi dış adrestir (issuer); konteyner bunu host'taki nginx üzerinden çözer.
+  extra_hosts:
+    - "${IDENTITY_HOST}:host-gateway"
+  depends_on:
+    postgres:
+      condition: service_healthy
+    rabbitmq:
+      condition: service_healthy
+  mem_limit: 512m
+  healthcheck:
+    test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+    interval: 15s
+    timeout: 3s
+    retries: 5
+    start_period: 30s
+
+services:
+  postgres:
+    image: postgis/postgis:17-3.5-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: baseforge
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD}
+      POSTGRES_DB: identity_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    mem_limit: 768m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U baseforge -d identity_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: baseforge
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    mem_limit: 384m
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  identity:
+    <<: *dotnet
+    build: ../identity
+    environment:
+      <<: *dotnet-env
+      ConnectionStrings__Default: Host=postgres;Database=identity_db;Username=baseforge;Password=${POSTGRES_PASSWORD}
+      # Kalıcı imza ve şifreleme sertifikaları (deploy/make-certs.sh üretir); yoksa her açılışta oturumlar düşer.
+      Auth__SigningCertificatePath: /app/certs/signing.pfx
+      Auth__SigningCertificatePassword: ${CERT_PASSWORD:?CERT_PASSWORD}
+      Auth__EncryptionCertificatePath: /app/certs/encryption.pfx
+      Auth__EncryptionCertificatePassword: ${CERT_PASSWORD}
+      Auth__Clients__1__Secret: ${TRACKING_CLIENT_SECRET:?TRACKING_CLIENT_SECRET}
+      Auth__Clients__2__Secret: ${KANTAR_CLIENT_SECRET:?KANTAR_CLIENT_SECRET}
+      Auth__PasswordReset__ResetUrl: https://${WEB_HOST}/sifre-sifirla
+      Auth__MultiTenancy__PortalUrl: https://${WEB_HOST}
+      # Kapalı test: SMS ve e-posta log'a yazılır (Netgsm başlığı ve SMTP hazır olunca kaldırın, sağlayıcıyı girin).
+      Auth__Messaging__AllowLogProvider: ${ALLOW_LOG_MESSAGING:-false}
+      Auth__Messaging__SmsProvider: ${SMS_PROVIDER:-Log}
+      Auth__Messaging__EmailProvider: ${EMAIL_PROVIDER:-Log}
+      Auth__Messaging__Netgsm__Usercode: ${NETGSM_USERCODE:-}
+      Auth__Messaging__Netgsm__Password: ${NETGSM_PASSWORD:-}
+      Auth__Messaging__Netgsm__MsgHeader: ${NETGSM_HEADER:-}
+    volumes:
+      - ./certs:/app/certs:ro
+      - identity-avatars:/app/wwwroot/uploads
+      - identity-documents:/app/data/tenant-documents
+    ports:
+      - "127.0.0.1:8401:8080"
+
+  kantar:
+    <<: *dotnet
+    build: ../kantar
+    environment:
+      <<: *dotnet-env
+      ConnectionStrings__Default: Host=postgres;Database=prokantar_kantar_db;Username=baseforge;Password=${POSTGRES_PASSWORD}
+      Grpc__Platform: http://platform:8081
+      Grpc__Identity: http://identity:8081
+      Auth__ServiceClient__ClientId: kantar-service
+      Auth__ServiceClient__ClientSecret: ${KANTAR_CLIENT_SECRET}
+      WaybillLinks__WebUrl: https://${WEB_HOST}
+      DataProtection__KeysPath: /app/data/keys
+      Routing__OsrmUrl: ${OSRM_URL:-https://router.project-osrm.org/}
+    volumes:
+      - kantar-keys:/app/data/keys
+    ports:
+      - "127.0.0.1:8403:8080"
+
+  platform:
+    <<: *dotnet
+    build: ../platform
+    environment:
+      <<: *dotnet-env
+      ConnectionStrings__Default: Host=postgres;Database=prokantar_platform_db;Username=baseforge;Password=${POSTGRES_PASSWORD}
+      Invitations__WebUrl: https://${WEB_HOST}
+      Netgsm__AllowLog: ${ALLOW_LOG_MESSAGING:-false}
+      Netgsm__Usercode: ${NETGSM_USERCODE:-}
+      Netgsm__Password: ${NETGSM_PASSWORD:-}
+      Netgsm__MsgHeader: ${NETGSM_HEADER:-}
+      Nvi__Enabled: ${NVI_ENABLED:-false}
+    volumes:
+      - platform-uploads:/app/wwwroot/uploads
+    ports:
+      - "127.0.0.1:8405:8080"
+
+  tracking:
+    <<: *dotnet
+    build: ../tracking
+    environment:
+      <<: *dotnet-env
+      ConnectionStrings__Default: Host=postgres;Database=prokantar_tracking_db;Username=baseforge;Password=${POSTGRES_PASSWORD}
+      Grpc__Platform: http://platform:8081
+      Auth__ServiceClient__ClientId: tracking-service
+      Auth__ServiceClient__ClientSecret: ${TRACKING_CLIENT_SECRET}
+    ports:
+      - "127.0.0.1:8407:8080"
+
+  ui:
+    build:
+      context: ../../ProKantarUI
+      args:
+        NEXT_PUBLIC_IDENTITY_URL: https://${IDENTITY_HOST}
+        NEXT_PUBLIC_KANTAR_URL: https://${KANTAR_HOST}
+        NEXT_PUBLIC_PLATFORM_URL: https://${PLATFORM_HOST}
+        NEXT_PUBLIC_TRACKING_URL: https://${TRACKING_HOST}
+        NEXT_PUBLIC_SIMULATOR: ${UI_SIMULATOR:-0}
+    restart: unless-stopped
+    mem_limit: 384m
+    ports:
+      - "127.0.0.1:8409:3000"
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.31.60.0/24
+
+volumes:
+  pgdata:
+  rabbitmq-data:
+  identity-avatars:
+  identity-documents:
+  kantar-keys:
+  platform-uploads:

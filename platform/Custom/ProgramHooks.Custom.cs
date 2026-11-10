@@ -36,7 +36,8 @@ internal static partial class ProgramHooks
         var netgsm = builder.Configuration.GetSection("Netgsm");
         builder.Services.Configure<NetgsmOptions>(netgsm);
         var smsConfigured = netgsm.Get<NetgsmOptions>()?.IsConfigured == true;
-        if (!smsConfigured && !builder.Environment.IsDevelopment())
+        // Kapalı test ortamında (Netgsm__AllowLog=true) SMS'ler bilerek log'a yazılır.
+        if (!smsConfigured && !builder.Environment.IsDevelopment() && !builder.Configuration.GetValue<bool>("Netgsm:AllowLog"))
         {
             // Davet SMS'i sessizce log'a düşmesin: production'da hesap eksikse uygulama açılmaz (identity'deki kuralla aynı).
             throw new InvalidOperationException("Netgsm için Usercode, Password ve MsgHeader zorunlu (Netgsm__*). SMS'ler log'a yazılırdı.");

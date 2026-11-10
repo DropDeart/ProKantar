@@ -4,6 +4,7 @@ using Kantar.Custom.Shipments;
 using Kantar.Custom.Tracking;
 using Kantar.Data;
 using MediatR;
+using Microsoft.AspNetCore.DataProtection;
 using MediatR.Pipeline;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -16,6 +17,11 @@ internal static partial class ProgramHooks
     static partial void ConfigureServices(WebApplicationBuilder builder)
     {
         // Sevkiyat yol ön izlemesi (OSRM); sonuçlar önbellekte.
+        // e-Logo şifresi ve irsaliye linki imzası DataProtection ile: anahtarlar kalıcı klasörde (sunucuda volume),
+        // yoksa container yeniden kurulunca kayıtlı şifreler çözülemez ve gönderilmiş linkler geçersizleşir.
+        builder.Services.AddDataProtection()
+            .SetApplicationName("prokantar-kantar")
+            .PersistKeysToFileSystem(new DirectoryInfo(builder.Configuration["DataProtection:KeysPath"] ?? Path.Combine(AppContext.BaseDirectory, "data", "keys")));
         builder.Services.AddMemoryCache();
         builder.Services.Configure<Kantar.Custom.Shipments.Routing.RoutingOptions>(
             builder.Configuration.GetSection(Kantar.Custom.Shipments.Routing.RoutingOptions.Section));

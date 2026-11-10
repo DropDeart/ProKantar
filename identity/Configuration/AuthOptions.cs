@@ -18,6 +18,15 @@ public sealed class AuthOptions
     public string? SigningCertificatePassword { get; set; }
 
     /// <summary>
+    /// Refresh token ve yetki kodlarını şifreleyen kalıcı sertifika (PFX, keyEncipherment). Verilmezse her açılışta yeni anahtar
+    /// üretilir ve servis yeniden başlayınca bütün oturumlar düşer (yalnız geliştirme).
+    /// </summary>
+    public string? EncryptionCertificatePath { get; set; }
+
+    /// <summary>Şifreleme sertifikasının parolası.</summary>
+    public string? EncryptionCertificatePassword { get; set; }
+
+    /// <summary>
     /// Access token ömrü (dk). Şirketten çıkarma/askı ve rol değişikliği en geç bu sürede yansır
     /// (refresh token yenilendiğinde şirket ve roller veritabanından yeniden okunur).
     /// </summary>
@@ -111,6 +120,12 @@ public sealed class MessagingOptions
 
     /// <summary>Netgsm OTP hesabı (SmsProvider = Netgsm).</summary>
     public NetgsmOptions Netgsm { get; set; } = new();
+
+    /// <summary>
+    /// Kapalı test ortamı (staging): geliştirme dışında da <c>Log</c> sağlayıcısına izin verir; kodlar ve linkler
+    /// log'a yazılır. Gerçek kullanıcıya açık ortamda false kalmalı (<c>Auth__Messaging__AllowLogProvider</c>).
+    /// </summary>
+    public bool AllowLogProvider { get; set; }
 }
 
 /// <summary>Netgsm hesabı. Şifre .env'de: <c>Auth__Messaging__Netgsm__Password</c>.</summary>

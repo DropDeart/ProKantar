@@ -26,3 +26,7 @@ identity/data/
 # Simülasyon betiğinin yerel test firması bilgileri
 tools/simulate/.env.local
 tools/simulate/__pycache__/
+
+# Sunucu kurulumu: gizli değerler ve identity sertifikaları
+deploy/.env.server
+deploy/certs/

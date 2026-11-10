@@ -38,7 +38,7 @@ public static class MessagingRegistration
             throw new InvalidOperationException("Auth:Messaging:Smtp için Host ve FromAddress zorunlu.");
         }
 
-        if (!environment.IsDevelopment())
+        if (!environment.IsDevelopment() && !messaging.AllowLogProvider)
         {
             var needsEmail = options.Otp.Enabled || options.PasswordReset.Enabled;
             if ((needsEmail && messaging.EmailProvider == log) || (options.Otp.Enabled && messaging.SmsProvider == log))

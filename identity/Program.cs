@@ -142,7 +142,18 @@ builder.Services.AddOpenIddict()
         options.RegisterScopes(scopeNames);
 
         // Asimetrik imzalama (RSA) → JWKS. Sertifika verildiyse kalıcı, yoksa ephemeral (dev).
-        options.AddEphemeralEncryptionKey();
+        // Şifreleme (refresh token, yetki kodu) de kalıcı olmalı; yoksa her yeniden başlatmada oturumlar düşer.
+        if (!string.IsNullOrWhiteSpace(authOptions.EncryptionCertificatePath) && File.Exists(authOptions.EncryptionCertificatePath))
+        {
+            options.AddEncryptionCertificate(X509CertificateLoader.LoadPkcs12FromFile(
+                authOptions.EncryptionCertificatePath,
+                authOptions.EncryptionCertificatePassword));
+        }
+        else
+        {
+            options.AddEphemeralEncryptionKey();
+        }
+
         if (!string.IsNullOrWhiteSpace(authOptions.SigningCertificatePath) && File.Exists(authOptions.SigningCertificatePath))
         {
             var certificate = X509CertificateLoader.LoadPkcs12FromFile(

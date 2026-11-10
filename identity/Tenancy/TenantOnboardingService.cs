@@ -17,6 +17,9 @@ public interface ITenantOnboardingService
     /// <summary>Başvurular: başvuran ve zorunlu belge durumu ile (duruma göre süzülür).</summary>
     Task<IReadOnlyList<AdminTenantDto>> ListAsync(TenantStatus? status, CancellationToken cancellationToken);
 
+    /// <summary>Başvurular, sayfalı (durum süzgeci ve arama sunucuda); duruma göre toplamlarla.</summary>
+    Task<AdminTenantPage> PageAsync(AdminTenantPageQuery query, CancellationToken cancellationToken);
+
     /// <summary>Şirket ayrıntısı (yöneticisi ya da platform yöneticisi).</summary>
     Task<TenantDto> GetAsync(Guid tenantId, TenantActor actor, CancellationToken cancellationToken);
 
@@ -99,6 +102,58 @@ internal sealed class TenantOnboardingService(
             .Where(t => status == null || t.Status == status)
             .OrderByDescending(t => t.CreatedAt)
             .ToListAsync(cancellationToken);
+        return await ToAdminDtosAsync(tenants, cancellationToken);
+    }
+
+    public async Task<AdminTenantPage> PageAsync(AdminTenantPageQuery query, CancellationToken cancellationToken)
+    {
+        var page = Math.Max(1, query.Page);
+        var pageSize = Math.Clamp(query.PageSize, 1, 100);
+        var required = TenantDocumentRules.Required.ToList();
+        var requiredCount = required.Count;
+        var documents = db.Set<TenantDocument>();
+        var all = db.Set<Tenant>().AsNoTracking();
+
+        // Belgeleri tam: zorunlu türlerin hepsi yüklenmiş (aynı türden birden çok dosya bir sayılır).
+        var complete = all.Where(t => documents.Where(d => d.TenantId == t.Id && required.Contains(d.Type)).Select(d => d.Type).Distinct().Count() == requiredCount);
+        var incomplete = all.Where(t => documents.Where(d => d.TenantId == t.Id && required.Contains(d.Type)).Select(d => d.Type).Distinct().Count() < requiredCount);
+
+        var byStatus = await all.GroupBy(t => t.Status).Select(g => new { g.Key, Count = g.Count() }).ToListAsync(cancellationToken);
+        var awaiting = await incomplete.CountAsync(t => t.Status == TenantStatus.Pending, cancellationToken);
+        var counts = Enum.GetValues<TenantStatus>().ToDictionary(s => s.ToString(), s => byStatus.FirstOrDefault(x => x.Key == s)?.Count ?? 0);
+        counts[nameof(TenantStatus.Pending)] -= awaiting;
+        counts["AwaitingDocuments"] = awaiting;
+
+        var filtered = query.State switch
+        {
+            null or "" or "all" => all,
+            "AwaitingDocuments" => incomplete.Where(t => t.Status == TenantStatus.Pending),
+            nameof(TenantStatus.Pending) => complete.Where(t => t.Status == TenantStatus.Pending),
+            var s when Enum.TryParse<TenantStatus>(s, out var status) => all.Where(t => t.Status == status),
+            _ => throw IdentityException.Invalid("Geçersiz durum süzgeci."),
+        };
+
+        if (!string.IsNullOrWhiteSpace(query.Search))
+        {
+            var term = query.Search.Trim();
+            var pattern = "%" + term.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_") + "%";
+            var users = db.Users;
+            filtered = filtered.Where(t =>
+                EF.Functions.ILike(t.Name, pattern)
+                || (t.TaxNo != null && EF.Functions.ILike(t.TaxNo, pattern))
+                || (t.City != null && EF.Functions.ILike(t.City, pattern))
+                || users.Any(u => u.Id == t.CreatedByUserId
+                    && ((u.Email != null && EF.Functions.ILike(u.Email, pattern)) || (u.FullName != null && EF.Functions.ILike(u.FullName, pattern)))));
+        }
+
+        var total = await filtered.CountAsync(cancellationToken);
+        var tenants = await filtered.OrderByDescending(t => t.CreatedAt).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
+        return new AdminTenantPage(await ToAdminDtosAsync(tenants, cancellationToken), total, page, pageSize, counts);
+    }
+
+    /// <summary>Şirketleri başvuran ve belge durumuyla yönetici satırına çevirir.</summary>
+    private async Task<IReadOnlyList<AdminTenantDto>> ToAdminDtosAsync(List<Tenant> tenants, CancellationToken cancellationToken)
+    {
         var ids = tenants.Select(t => t.Id).ToList();
         var creatorIds = tenants.Select(t => t.CreatedByUserId).Distinct().ToList();
 

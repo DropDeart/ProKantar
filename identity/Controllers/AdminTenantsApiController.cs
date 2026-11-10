@@ -22,6 +22,11 @@ public sealed class AdminTenantsApiController(UserManager<ApplicationUser> userM
     public Task<IReadOnlyList<AdminTenantDto>> List([FromQuery] TenantStatus? status, CancellationToken cancellationToken)
         => onboarding.ListAsync(status, cancellationToken);
 
+    /// <summary>Başvurular, sayfalı: <c>?page=&amp;pageSize=&amp;state=&amp;search=</c>; özet kutuları için duruma göre toplamlar.</summary>
+    [HttpGet("paged")]
+    public Task<AdminTenantPage> Paged([FromQuery] AdminTenantPageQuery query, CancellationToken cancellationToken)
+        => onboarding.PageAsync(query, cancellationToken);
+
     /// <summary>Onaylar.</summary>
     [HttpPost("{tenantId:guid}/approve")]
     public Task<TenantDto> Approve(Guid tenantId, [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] ReviewTenantRequest? request, CancellationToken cancellationToken)

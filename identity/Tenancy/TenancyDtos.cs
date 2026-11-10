@@ -29,6 +29,20 @@ public sealed record TenantDto(
 /// <summary>Platform yöneticisinin başvuru listesi satırı.</summary>
 public sealed record AdminTenantDto(TenantDto Tenant, string? ApplicantEmail, string? ApplicantName, bool DocumentsComplete);
 
+/// <summary>
+/// Başvuru listesi sorgusu. <c>State</c>: Pending (belgeler tam, inceleme bekliyor), AwaitingDocuments (belge eksik),
+/// Active, Rejected, Suspended; boşsa hepsi. Arama: unvan, VKN, il, başvuranın e-postası ya da adı.
+/// </summary>
+public sealed record AdminTenantPageQuery(int Page = 1, int PageSize = 20, string? State = null, string? Search = null);
+
+/// <summary>Başvuru sayfası; <c>Counts</c> aramadan ve süzgeçten bağımsız, duruma göre toplamlar (özet kutuları).</summary>
+public sealed record AdminTenantPage(
+    IReadOnlyList<AdminTenantDto> Items, int TotalCount, int Page, int PageSize, IReadOnlyDictionary<string, int> Counts)
+{
+    /// <summary>Toplam sayfa (diğer sayfalı uçlarla aynı biçim).</summary>
+    public int TotalPages => PageSize == 0 ? 0 : (int)Math.Ceiling(TotalCount / (double)PageSize);
+}
+
 /// <summary>Belge kaydı (dosya içeriği ayrı uçtan).</summary>
 public sealed record TenantDocumentDto(Guid Id, TenantDocumentType Type, string FileName, string ContentType, long Size, DateTimeOffset UploadedAt)
 {

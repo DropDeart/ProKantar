@@ -1,0 +1,4 @@
+# Sunucuda çalışan dosyalar LF kalmalı (Windows checkout CRLF yapmasın)
+*.sh text eol=lf
+deploy/** text eol=lf
+Dockerfile text eol=lf

@@ -170,8 +170,10 @@ namespace Platform.Custom.DemoRequests
                 .Skip(query.Skip).Take(query.PageSize)
                 .Select(r => new DemoRequestDto(r.Id, r.FullName, r.Company, r.Phone, r.Email, r.Plan, r.Message, r.CreatedAt, r.HandledAt))
                 .ToListAsync(cancellationToken);
-            return Ok(new DemoRequestPage(items, await rows.CountAsync(cancellationToken), query.Page, query.PageSize,
-                await all.CountAsync(r => r.HandledAt == null, cancellationToken)));
+            var openCount = await all.CountAsync(r => r.HandledAt == null, cancellationToken);
+            // Aramasız "bekleyenler" süzgecinde toplam, bekleyen sayısının aynısıdır; ikinci sayım atılmaz.
+            var total = query.Open == true && string.IsNullOrWhiteSpace(query.Search) ? openCount : await rows.CountAsync(cancellationToken);
+            return Ok(new DemoRequestPage(items, total, query.Page, query.PageSize, openCount));
         }
 
         /// <summary>Talebi ele alındı olarak işaretler.</summary>

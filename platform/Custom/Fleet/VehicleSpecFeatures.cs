@@ -4,6 +4,7 @@ using BaseForge.Core.CQRS;
 using BaseForge.Core.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Platform.Custom.Drivers;
+using Platform.Custom.Paging;
 using Platform.Custom.Validation;
 using Platform.Data;
 using Platform.Entities;
@@ -261,16 +262,12 @@ internal sealed class FleetPageHandler(PlatformDbContext db) : IQueryHandler<Fle
                         || EF.Functions.ILike(s.VehicleModel.Name, pattern, LikePattern.EscapeCharacter))));
         }
 
-        var vehicles = db.Vehicles.Where(v => specs.Select(s => s.VehicleId).Contains(v.Id));
-        var total = await vehicles.CountAsync(cancellationToken);
-        var page = vehicles.OrderBy(v => v.Plate).Skip(request.Skip).Take(request.PageSize);
-        return new PagedResult<VehicleSpecDto>
-        {
-            Items = await VehicleSpecs.ProjectAsync(db, page, request.TenantId, cancellationToken),
-            TotalCount = total,
-            Page = request.Page,
-            PageSize = request.PageSize,
-        };
+        var page = db.Vehicles.Where(v => specs.Select(s => s.VehicleId).Contains(v.Id))
+            .OrderBy(v => v.Plate).Skip(request.Skip).Take(request.PageSize);
+        var items = await VehicleSpecs.ProjectAsync(db, page, request.TenantId, cancellationToken);
+        // Araç başına tek kayıt: toplam, kayıt sayısıdır. İlk sayfa dolmadıysa sayım sorgusu gerekmez.
+        var total = request.Skip == 0 && items.Count < request.PageSize ? items.Count : await specs.CountAsync(cancellationToken);
+        return PageQueries.Result(items, total, request);
     }
 }
 

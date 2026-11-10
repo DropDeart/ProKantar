@@ -1,6 +1,7 @@
 using BaseForge.Core.CQRS;
 using BaseForge.Core.Exceptions;
 using Microsoft.EntityFrameworkCore;
+using Platform.Custom.Paging;
 using Platform.Custom.Validation;
 using Platform.Data;
 using Platform.Entities;
@@ -214,17 +215,8 @@ internal sealed class TenantDriversPageHandler(PlatformDbContext db) : IQueryHan
                 || (digits.Length >= 3 && t.Status == TenantDriverStatus.Active && t.Phone.Contains(digits)));
         }
 
-        var total = await query.CountAsync(cancellationToken);
-        var rows = await query.OrderBy(t => t.Status).ThenByDescending(t => t.CreatedAt)
-            .Skip(request.Skip).Take(request.PageSize)
-            .ToListAsync(cancellationToken);
-        return new PagedResult<TenantDriverDto>
-        {
-            Items = await TenantDriverRows.ToDtosAsync(db, rows, cancellationToken),
-            TotalCount = total,
-            Page = request.Page,
-            PageSize = request.PageSize,
-        };
+        var (rows, total) = await PageQueries.ReadPageAsync(query.OrderBy(t => t.Status).ThenByDescending(t => t.CreatedAt), request, cancellationToken);
+        return PageQueries.Result(await TenantDriverRows.ToDtosAsync(db, rows, cancellationToken), total, request);
     }
 }
 
@@ -239,8 +231,10 @@ internal static class TenantDriverRows
     public static async Task<IReadOnlyList<TenantDriverDto>> ToDtosAsync(PlatformDbContext db, List<TenantDriver> rows, CancellationToken cancellationToken)
     {
         var driverIds = rows.Where(r => r.DriverId is not null).Select(r => r.DriverId!.Value).Distinct().ToList();
-        var drivers = (await DriverItems.ProjectAsync(db, db.Drivers.AsNoTracking().Where(d => driverIds.Contains(d.Id)), true, cancellationToken))
-            .ToDictionary(d => d.Id);
+        var drivers = driverIds.Count == 0
+            ? new Dictionary<Guid, DriverSearchItemDto>()
+            : (await DriverItems.ProjectAsync(db, db.Drivers.AsNoTracking().Where(d => driverIds.Contains(d.Id)), true, cancellationToken))
+                .ToDictionary(d => d.Id);
 
         return rows.Select(r =>
         {

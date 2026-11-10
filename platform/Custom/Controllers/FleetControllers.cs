@@ -1,3 +1,4 @@
+using BaseForge.Core.CQRS;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Platform.Custom.Fleet;
@@ -88,7 +89,7 @@ public sealed class FleetController : CallerController
 
     /// <summary>Firmanın araçları, sayfalı: <c>?page=&amp;pageSize=&amp;search=</c> (liste ekranı; araç seçici tam listeyi kullanır).</summary>
     [HttpGet("paged")]
-    public async Task<ActionResult<BaseForge.Core.CQRS.PagedResult<VehicleSpecDto>>> Paged([FromQuery] FleetPageQuery query, CancellationToken cancellationToken)
+    public async Task<ActionResult<PagedResult<VehicleSpecDto>>> Paged([FromQuery] FleetPageQuery query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
         query.TenantId = TenantId;

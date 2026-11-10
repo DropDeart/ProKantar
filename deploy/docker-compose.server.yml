@@ -10,7 +10,8 @@ x-dotnet: &dotnet
   restart: unless-stopped
   environment: &dotnet-env
     ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Staging}
-    Serilog__LokiUrl: ""
+    # Merkezi log: Loki (aynı ağda); BaseForge 0.6.6 kuyruğu sınırlı, Loki kapalıyken bellek şişmez.
+    Serilog__LokiUrl: http://loki:3100
     # Token'ı içeriden doğrular (discovery/JWKS identity konteynerinden); issuer dışarıdaki adres.
     Auth__Authority: http://identity:8080
     Auth__Issuer: https://${IDENTITY_HOST}/
@@ -69,6 +70,35 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
+
+  # Merkezi log: Loki (yalnız iç ağ) + Grafana (log.<alan adı>, nginx arkasında; port dışarı açılmaz).
+  loki:
+    image: grafana/loki:3.2.0
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki-config.yaml
+    volumes:
+      - ../observability/grafana/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - loki-data:/loki
+    mem_limit: 512m
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?GRAFANA_PASSWORD}
+      GF_SERVER_ROOT_URL: https://${LOG_HOST}/
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    volumes:
+      - ../observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../observability/grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - loki
+    mem_limit: 256m
+    ports:
+      - "127.0.0.1:8410:3000"
 
   identity:
     <<: *dotnet
@@ -173,3 +203,5 @@ volumes:
   identity-documents:
   kantar-keys:
   platform-uploads:
+  loki-data:
+  grafana-data:

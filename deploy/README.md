@@ -10,6 +10,7 @@ RabbitMQ ve web arayüzü. Servisler yalnız `127.0.0.1:84xx`'te dinler; dışar
 | kantar.prokantar.com.tr | kantar | 8403 |
 | platform.prokantar.com.tr | platform (SignalR `/hubs/`) | 8405 |
 | tracking.prokantar.com.tr | tracking | 8407 |
+| log.prokantar.com.tr | Grafana (loglar; Loki yalnız iç ağda) | 8410 |
 
 ## İlk kurulum
 1. **DNS:** yukarıdaki altı ad için A kaydı → sunucu IP'si.

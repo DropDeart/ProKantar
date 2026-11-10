@@ -161,6 +161,12 @@ Açık kalanlar:
 - [ ] Yeni kolonlar ve tablolar servis açılışında idempotent SQL ile kuruluyor (EnsureCreated var olan DB'ye eklemez).
 - [ ] **Regen riski.** Üretici yeniden çalışırsa şu elle değişiklikler ezilir ve yeniden uygulanmalı:
   - kantar: `Kantar.csproj`, `Data/KantarDbContext.cs` (`ShipmentStopLines` DbSet dahil), üretilmiş Entity/Dto/Command dosyalarına eklenen alanlar
+  - kantar (10.11): `Features/Stations/StationQueries.cs` ve `Features/DeliveryLocations/DeliveryLocationQueries.cs` arama koşuluna
+    `City`/`District`/`PostalCode` elle eklendi (il/ilçe 05.11'de spec'e girmiş, sorgu üretilmemişti). Üretici spec'ten aynısını üretir;
+    ezilse de sonuç aynı. `Waybill` ve `Weighbridge` için spec'e `searchFields` kondu: yeniden üretim TCKN, UBL XML ve
+    `ConnectionInfo`'yu aramaya katmasın.
+  - platform (10.11): sayfalı uçlar elle yazıldı (generate dokunmaz): `GET api/Fleet/paged`, `GET api/TenantDrivers/paged`,
+    `GET api/demo-requests` (artık sayfalı, `openCount` ile). Tam liste uçları seçiciler ve mobil için aynen duruyor.
   - identity: `Program.cs`, `Controllers/AuthorizationController.cs` (`phone_number` claim'i), `Messaging/MessagingRegistration.cs` + `Configuration/AuthOptions.cs` (Netgsm sağlayıcısı; `Messaging/NetgsmSmsSender.cs` elle yazıldı)
   - platform: `Program.cs` (09.11: `EnableRabbitMq` + `kantar/WaybillIssued` aboneliği), `Grpc/DriverGrpcService.cs`, `Data/PlatformDbContext.cs`
     (`VehicleModels`/`VehicleSpecs`/`TenantDrivers`/`DriverNotifications`/`DriverNotificationAttempts` DbSet + enum dönüşümleri)

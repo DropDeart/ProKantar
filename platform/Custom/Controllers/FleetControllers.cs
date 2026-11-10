@@ -86,6 +86,15 @@ public sealed class FleetController : CallerController
     public async Task<ActionResult<IReadOnlyList<VehicleSpecDto>>> List(CancellationToken cancellationToken)
         => Ok(await Mediator.Send(new FleetListQuery { TenantId = TenantId }, cancellationToken));
 
+    /// <summary>Firmanın araçları, sayfalı: <c>?page=&amp;pageSize=&amp;search=</c> (liste ekranı; araç seçici tam listeyi kullanır).</summary>
+    [HttpGet("paged")]
+    public async Task<ActionResult<BaseForge.Core.CQRS.PagedResult<VehicleSpecDto>>> Paged([FromQuery] FleetPageQuery query, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        query.TenantId = TenantId;
+        return Ok(await Mediator.Send(query, cancellationToken));
+    }
+
     /// <summary>Filoya araç ekler (plaka platformda yoksa açılır); araç kimliğini döndürür.</summary>
     [HttpPost]
     public async Task<ActionResult<Guid>> Add(AddFleetVehicleCommand command, CancellationToken cancellationToken)

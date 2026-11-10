@@ -40,6 +40,21 @@ public sealed class TenantDriversQuery : IQuery<IReadOnlyList<TenantDriverDto>>
     public Guid TenantId { get; set; }
 }
 
+/// <summary>
+/// Firmanın şoförleri, sayfalı (liste ekranı). Arama: şoför adı; telefon yalnız aktif şoförlerde
+/// (davetli numaralar maskeli gösterildiği için aramayla doğrulanamaz).
+/// </summary>
+public sealed class TenantDriversPageQuery : PagedRequest, IQuery<PagedResult<TenantDriverDto>>
+{
+    /// <summary>Firma (controller doldurur).</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public Guid TenantId { get; set; }
+
+    /// <summary>İsteğe bağlı durum filtresi.</summary>
+    public TenantDriverStatus? Status { get; set; }
+}
+
 /// <summary>Şoför davet eder: kayıtlı şoför (<see cref="DriverId"/>) ya da telefon (<see cref="Phone"/>) ile.</summary>
 public sealed class InviteDriverCommand : ICommand<Guid>
 {
@@ -173,10 +188,56 @@ internal sealed class TenantDriversHandler(PlatformDbContext db) : IQueryHandler
     public async Task<IReadOnlyList<TenantDriverDto>> Handle(TenantDriversQuery request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var rows = await db.TenantDrivers.AsNoTracking()
-            .Where(t => t.TenantId == request.TenantId && t.Status != TenantDriverStatus.Removed)
+        var rows = await TenantDriverRows.Of(db, request.TenantId)
             .OrderBy(t => t.Status).ThenByDescending(t => t.CreatedAt)
             .ToListAsync(cancellationToken);
+        return await TenantDriverRows.ToDtosAsync(db, rows, cancellationToken);
+    }
+}
+
+internal sealed class TenantDriversPageHandler(PlatformDbContext db) : IQueryHandler<TenantDriversPageQuery, PagedResult<TenantDriverDto>>
+{
+    public async Task<PagedResult<TenantDriverDto>> Handle(TenantDriversPageQuery request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var query = TenantDriverRows.Of(db, request.TenantId);
+        if (request.Status is { } status)
+        {
+            query = query.Where(t => t.Status == status);
+        }
+
+        if (LikePattern.ContainsOrNull(request.Search) is { } pattern)
+        {
+            var digits = Phones.Key(request.Search);
+            var byName = db.Drivers.Where(d => EF.Functions.ILike(d.FullName, pattern, LikePattern.EscapeCharacter)).Select(d => d.Id);
+            query = query.Where(t => (t.DriverId != null && byName.Contains(t.DriverId.Value))
+                || (digits.Length >= 3 && t.Status == TenantDriverStatus.Active && t.Phone.Contains(digits)));
+        }
+
+        var total = await query.CountAsync(cancellationToken);
+        var rows = await query.OrderBy(t => t.Status).ThenByDescending(t => t.CreatedAt)
+            .Skip(request.Skip).Take(request.PageSize)
+            .ToListAsync(cancellationToken);
+        return new PagedResult<TenantDriverDto>
+        {
+            Items = await TenantDriverRows.ToDtosAsync(db, rows, cancellationToken),
+            TotalCount = total,
+            Page = request.Page,
+            PageSize = request.PageSize,
+        };
+    }
+}
+
+/// <summary>Firma–şoför satırlarının ortak sorgusu ve DTO eşlemesi (tam liste ve sayfalı liste aynı veriyi üretir).</summary>
+internal static class TenantDriverRows
+{
+    /// <summary>Firmanın çıkarılmamış şoför satırları.</summary>
+    public static IQueryable<TenantDriver> Of(PlatformDbContext db, Guid tenantId)
+        => db.TenantDrivers.AsNoTracking().Where(t => t.TenantId == tenantId && t.Status != TenantDriverStatus.Removed);
+
+    /// <summary>Satırları şoför bilgileriyle DTO'ya çevirir; aktif olmayanların telefonu maskelenir.</summary>
+    public static async Task<IReadOnlyList<TenantDriverDto>> ToDtosAsync(PlatformDbContext db, List<TenantDriver> rows, CancellationToken cancellationToken)
+    {
         var driverIds = rows.Where(r => r.DriverId is not null).Select(r => r.DriverId!.Value).Distinct().ToList();
         var drivers = (await DriverItems.ProjectAsync(db, db.Drivers.AsNoTracking().Where(d => driverIds.Contains(d.Id)), true, cancellationToken))
             .ToDictionary(d => d.Id);

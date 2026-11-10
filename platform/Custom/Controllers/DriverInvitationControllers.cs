@@ -1,3 +1,4 @@
+using BaseForge.Core.CQRS;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Platform.Custom.Drivers;
@@ -13,6 +14,15 @@ public sealed class TenantDriversController : CallerController
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<TenantDriverDto>>> List(CancellationToken cancellationToken)
         => Ok(await Mediator.Send(new TenantDriversQuery { TenantId = TenantId }, cancellationToken));
+
+    /// <summary>Firmanın şoförleri, sayfalı: <c>?page=&amp;pageSize=&amp;search=&amp;status=</c> (liste ekranı; seçiciler tam listeyi kullanır).</summary>
+    [HttpGet("paged")]
+    public async Task<ActionResult<PagedResult<TenantDriverDto>>> Paged([FromQuery] TenantDriversPageQuery query, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        query.TenantId = TenantId;
+        return Ok(await Mediator.Send(query, cancellationToken));
+    }
 
     /// <summary>Kayıtlı şoförü ya da telefon numarasını davet eder; şoföre bildirim / SMS gider.</summary>
     [HttpPost("invite")]

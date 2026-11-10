@@ -194,6 +194,15 @@ public sealed class FleetListQuery : IQuery<IReadOnlyList<VehicleSpecDto>>
     public Guid TenantId { get; set; }
 }
 
+/// <summary>Firmanın araçları, sayfalı (liste ekranı). Arama: plaka (boşluk/harf büyüklüğü fark etmez), marka, model.</summary>
+public sealed class FleetPageQuery : PagedRequest, IQuery<PagedResult<VehicleSpecDto>>
+{
+    /// <summary>Firma (controller doldurur).</summary>
+    [JsonIgnore]
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public Guid TenantId { get; set; }
+}
+
 /// <summary>Firmanın filosuna araç ekler; plaka platformda yoksa açılır.</summary>
 public sealed class AddFleetVehicleCommand : ICommand<Guid>
 {
@@ -234,6 +243,34 @@ internal sealed class FleetListHandler(PlatformDbContext db) : IQueryHandler<Fle
         ArgumentNullException.ThrowIfNull(request);
         var fleet = db.VehicleSpecs.Where(s => s.FleetTenantId == request.TenantId).Select(s => s.VehicleId);
         return await VehicleSpecs.ProjectAsync(db, db.Vehicles.Where(v => fleet.Contains(v.Id)), request.TenantId, cancellationToken);
+    }
+}
+
+internal sealed class FleetPageHandler(PlatformDbContext db) : IQueryHandler<FleetPageQuery, PagedResult<VehicleSpecDto>>
+{
+    public async Task<PagedResult<VehicleSpecDto>> Handle(FleetPageQuery request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var specs = db.VehicleSpecs.Where(s => s.FleetTenantId == request.TenantId);
+        if (LikePattern.ContainsOrNull(request.Search) is { } pattern)
+        {
+            var plate = Plates.Key(request.Search);
+            specs = specs.Where(s => (plate.Length > 0 && db.Vehicles.Any(v => v.Id == s.VehicleId && v.Plate.Contains(plate)))
+                || (s.VehicleModel != null
+                    && (EF.Functions.ILike(s.VehicleModel.Brand, pattern, LikePattern.EscapeCharacter)
+                        || EF.Functions.ILike(s.VehicleModel.Name, pattern, LikePattern.EscapeCharacter))));
+        }
+
+        var vehicles = db.Vehicles.Where(v => specs.Select(s => s.VehicleId).Contains(v.Id));
+        var total = await vehicles.CountAsync(cancellationToken);
+        var page = vehicles.OrderBy(v => v.Plate).Skip(request.Skip).Take(request.PageSize);
+        return new PagedResult<VehicleSpecDto>
+        {
+            Items = await VehicleSpecs.ProjectAsync(db, page, request.TenantId, cancellationToken),
+            TotalCount = total,
+            Page = request.Page,
+            PageSize = request.PageSize,
+        };
     }
 }
 

@@ -1,3 +1,4 @@
+using BaseForge.Core.CQRS;
 using System.ComponentModel.DataAnnotations;
 using BaseForge.Core.Entities;
 using BaseForge.Core.Exceptions;
@@ -87,6 +88,16 @@ namespace Platform.Custom.DemoRequests
     public sealed record DemoRequestDto(
         Guid Id, string FullName, string Company, string Phone, string Email, string? Plan, string? Message, DateTimeOffset CreatedAt, DateTimeOffset? HandledAt);
 
+    /// <summary>Demo talepleri liste sorgusu (sayfa, arama, yalnız açık olanlar).</summary>
+    public sealed class DemoRequestListQuery : PagedRequest
+    {
+        /// <summary><c>true</c>: ele alınmamışlar, <c>false</c>: ele alınmışlar, boş: hepsi.</summary>
+        public bool? Open { get; set; }
+    }
+
+    /// <summary>Sayfalı demo talepleri; <c>OpenCount</c> ele alınmayı bekleyen toplam (filtreden bağımsız).</summary>
+    public sealed record DemoRequestPage(IReadOnlyList<DemoRequestDto> Items, int TotalCount, int Page, int PageSize, int OpenCount);
+
     /// <summary>Tanıtım sitesinin demo talebi (giriş istemez, IP başına sınırlı) ve yönetici listesi.</summary>
     [Route("api/demo-requests")]
     public sealed class DemoRequestsController(PlatformDbContext db) : CallerController
@@ -131,15 +142,37 @@ namespace Platform.Custom.DemoRequests
             return Accepted();
         }
 
-        /// <summary>Demo talepleri (en yeni önce).</summary>
+        /// <summary>
+        /// Demo talepleri, sayfalı (en yeni önce): <c>?page=&amp;pageSize=&amp;search=&amp;open=true</c>.
+        /// Arama: ad, firma, e-posta, telefon. <c>OpenCount</c> filtreden bağımsız, ele alınmayı bekleyen toplam talep.
+        /// </summary>
         [Authorize(Roles = "SuperAdmin")]
         [HttpGet]
-        public async Task<ActionResult<IReadOnlyList<DemoRequestDto>>> List(CancellationToken cancellationToken)
-            => Ok(await db.Set<DemoRequest>().AsNoTracking()
-                .OrderByDescending(r => r.CreatedAt)
-                .Take(200)
+        public async Task<ActionResult<DemoRequestPage>> List([FromQuery] DemoRequestListQuery query, CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(query);
+            var all = db.Set<DemoRequest>().AsNoTracking();
+            var rows = all;
+            if (query.Open is { } open)
+            {
+                rows = rows.Where(r => (r.HandledAt == null) == open);
+            }
+
+            if (LikePattern.ContainsOrNull(query.Search) is { } pattern)
+            {
+                rows = rows.Where(r => EF.Functions.ILike(r.FullName, pattern, LikePattern.EscapeCharacter)
+                    || EF.Functions.ILike(r.Company, pattern, LikePattern.EscapeCharacter)
+                    || EF.Functions.ILike(r.Email, pattern, LikePattern.EscapeCharacter)
+                    || EF.Functions.ILike(r.Phone, pattern, LikePattern.EscapeCharacter));
+            }
+
+            var items = await rows.OrderByDescending(r => r.CreatedAt)
+                .Skip(query.Skip).Take(query.PageSize)
                 .Select(r => new DemoRequestDto(r.Id, r.FullName, r.Company, r.Phone, r.Email, r.Plan, r.Message, r.CreatedAt, r.HandledAt))
-                .ToListAsync(cancellationToken));
+                .ToListAsync(cancellationToken);
+            return Ok(new DemoRequestPage(items, await rows.CountAsync(cancellationToken), query.Page, query.PageSize,
+                await all.CountAsync(r => r.HandledAt == null, cancellationToken)));
+        }
 
         /// <summary>Talebi ele alındı olarak işaretler.</summary>
         [Authorize(Roles = "SuperAdmin")]
